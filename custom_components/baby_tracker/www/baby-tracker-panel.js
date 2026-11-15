@@ -1476,7 +1476,7 @@ h2 { font-size:16px; font-weight:500; margin:0 0 10px; }
 .progress { height:10px; background:var(--divider-color); border-radius:5px; overflow:hidden; margin:8px 0 4px; }
 .progress div { height:100%; background:var(--primary-color); transition:width .3s; }
 button { font:inherit; cursor:pointer; }
-.large { width:100%; padding:16px; font-size:18px; border:0; border-radius:12px; background:var(--primary-color); color:var(--text-primary-color, #fff); }
+.large { width:100%; }
 .primary, .secondary, .danger { padding:10px 16px; border-radius:8px; border:0; font-size:15px; }
 .primary { background:var(--primary-color); color:var(--text-primary-color, #fff); width:100%; margin-top:8px; }
 .modal .primary { width:auto; margin:0; }
