@@ -1,0 +1,504 @@
+{
+  "source": {
+    "name": "CDC Learn the Signs. Act Early.",
+    "url": "https://www.cdc.gov/act-early/milestones/",
+    "checked": "2026-11-02",
+    "note": "months = CDC checkpoint: age by which most babies (about 75%) do this. Stage texts and optional steps are editorial."
+  },
+  "areas": {
+    "social": "Social",
+    "communication": "Communication",
+    "exploring": "Exploring",
+    "movement": "Movement"
+  },
+  "skills": [
+    {
+      "id": "smile",
+      "area": "social",
+      "name": "Smile & laugh",
+      "steps": [
+        {
+          "id": "smiles_in_response",
+          "months": 2,
+          "text": "Smiles when you talk to or smile at them"
+        },
+        {
+          "id": "smiles_on_own",
+          "months": 4,
+          "text": "Smiles on their own to get your attention"
+        },
+        {
+          "id": "chuckles",
+          "months": 4,
+          "text": "Chuckles when you try to make them laugh"
+        },
+        {
+          "id": "laughs",
+          "months": 6,
+          "text": "Laughs"
+        },
+        {
+          "id": "laughs_peekaboo",
+          "months": 9,
+          "text": "Smiles or laughs at peek-a-boo"
+        }
+      ]
+    },
+    {
+      "id": "bonding",
+      "area": "social",
+      "name": "Bonding",
+      "steps": [
+        {
+          "id": "calms_down",
+          "months": 2,
+          "text": "Calms down when spoken to or picked up"
+        },
+        {
+          "id": "looks_at_face",
+          "months": 2,
+          "text": "Looks at your face"
+        },
+        {
+          "id": "happy_to_see_you",
+          "months": 2,
+          "text": "Seems happy to see you walk up"
+        },
+        {
+          "id": "seeks_attention",
+          "months": 4,
+          "text": "Looks, moves or makes sounds to get or keep your attention"
+        },
+        {
+          "id": "knows_familiar_people",
+          "months": 6,
+          "text": "Knows familiar people"
+        },
+        {
+          "id": "shy_with_strangers",
+          "months": 9,
+          "text": "Is shy, clingy or fearful around strangers"
+        },
+        {
+          "id": "reacts_when_you_leave",
+          "months": 9,
+          "text": "Reacts when you leave (looks, reaches for you or cries)"
+        }
+      ]
+    },
+    {
+      "id": "expression",
+      "area": "social",
+      "name": "Expressions & play",
+      "steps": [
+        {
+          "id": "likes_mirror",
+          "months": 6,
+          "text": "Likes to look at self in a mirror"
+        },
+        {
+          "id": "facial_expressions",
+          "months": 9,
+          "text": "Shows several facial expressions: happy, sad, angry, surprised"
+        },
+        {
+          "id": "plays_games",
+          "months": 12,
+          "text": "Plays games with you, like pat-a-cake"
+        }
+      ]
+    },
+    {
+      "id": "voice",
+      "area": "communication",
+      "name": "Voice & babbling",
+      "steps": [
+        {
+          "id": "makes_sounds",
+          "months": 2,
+          "text": "Makes sounds other than crying"
+        },
+        {
+          "id": "coos",
+          "months": 4,
+          "text": "Coos: \"oooo\", \"aahh\""
+        },
+        {
+          "id": "sounds_back",
+          "months": 4,
+          "text": "Makes sounds back when you talk"
+        },
+        {
+          "id": "takes_turns",
+          "months": 6,
+          "text": "Takes turns making sounds with you"
+        },
+        {
+          "id": "raspberries",
+          "months": 6,
+          "text": "Blows raspberries"
+        },
+        {
+          "id": "squeals",
+          "months": 6,
+          "text": "Makes squealing noises"
+        },
+        {
+          "id": "babbles",
+          "months": 9,
+          "text": "Makes many different sounds: \"mamamama\", \"babababa\""
+        },
+        {
+          "id": "says_mama_dada",
+          "months": 12,
+          "text": "Calls a parent \"mama\", \"dada\" or another special name"
+        }
+      ]
+    },
+    {
+      "id": "hearing",
+      "area": "communication",
+      "name": "Hearing & understanding",
+      "steps": [
+        {
+          "id": "reacts_to_loud_sounds",
+          "months": 2,
+          "text": "Reacts to loud sounds"
+        },
+        {
+          "id": "turns_to_voice",
+          "months": 4,
+          "text": "Turns head towards your voice"
+        },
+        {
+          "id": "responds_to_name",
+          "months": 9,
+          "text": "Looks when you call their name"
+        },
+        {
+          "id": "understands_no",
+          "months": 12,
+          "text": "Understands \"no\" (pauses or stops)"
+        }
+      ]
+    },
+    {
+      "id": "gestures",
+      "area": "communication",
+      "name": "Gestures",
+      "steps": [
+        {
+          "id": "arms_up",
+          "months": 9,
+          "text": "Lifts arms up to be picked up"
+        },
+        {
+          "id": "waves_bye",
+          "months": 12,
+          "text": "Waves bye-bye"
+        }
+      ]
+    },
+    {
+      "id": "looking",
+      "area": "exploring",
+      "name": "Looking & tracking",
+      "steps": [
+        {
+          "id": "tracks_you",
+          "months": 2,
+          "text": "Watches you as you move"
+        },
+        {
+          "id": "looks_at_toy",
+          "months": 2,
+          "text": "Looks at a toy for several seconds"
+        },
+        {
+          "id": "looks_at_hands",
+          "months": 4,
+          "text": "Looks at their hands with interest"
+        }
+      ]
+    },
+    {
+      "id": "objects",
+      "area": "exploring",
+      "name": "Exploring objects",
+      "steps": [
+        {
+          "id": "mouths_objects",
+          "months": 6,
+          "text": "Puts things in mouth to explore them"
+        },
+        {
+          "id": "reaches_for_toy",
+          "months": 6,
+          "text": "Reaches to grab a toy they want"
+        },
+        {
+          "id": "bangs_things",
+          "months": 9,
+          "text": "Bangs two things together"
+        },
+        {
+          "id": "puts_in_container",
+          "months": 12,
+          "text": "Puts something in a container, like a block in a cup"
+        }
+      ]
+    },
+    {
+      "id": "hidden",
+      "area": "exploring",
+      "name": "Hidden things",
+      "steps": [
+        {
+          "id": "looks_for_dropped",
+          "months": 9,
+          "text": "Looks for objects dropped out of sight"
+        },
+        {
+          "id": "looks_for_hidden",
+          "months": 12,
+          "text": "Looks for things they see you hide"
+        }
+      ]
+    },
+    {
+      "id": "food",
+      "area": "exploring",
+      "name": "Food signals",
+      "steps": [
+        {
+          "id": "opens_mouth_for_food",
+          "months": 4,
+          "text": "If hungry, opens mouth at the breast or bottle"
+        },
+        {
+          "id": "closes_lips_when_full",
+          "months": 6,
+          "text": "Closes lips to show they don't want more"
+        }
+      ]
+    },
+    {
+      "id": "head",
+      "area": "movement",
+      "name": "Head & tummy time",
+      "steps": [
+        {
+          "id": "head_up_tummy",
+          "months": 2,
+          "text": "Holds head up when on tummy"
+        },
+        {
+          "id": "pushes_up_elbows",
+          "months": 4,
+          "text": "Pushes up onto elbows or forearms on tummy"
+        },
+        {
+          "id": "head_steady",
+          "months": 4,
+          "text": "Holds head steady without support when held"
+        },
+        {
+          "id": "straight_arms",
+          "months": 6,
+          "text": "Pushes up with straight arms on tummy"
+        }
+      ]
+    },
+    {
+      "id": "hands",
+      "area": "movement",
+      "name": "Arms & hands",
+      "steps": [
+        {
+          "id": "moves_all_limbs",
+          "months": 2,
+          "text": "Moves both arms and both legs"
+        },
+        {
+          "id": "opens_hands",
+          "months": 2,
+          "text": "Opens hands briefly"
+        },
+        {
+          "id": "hands_to_mouth",
+          "months": 4,
+          "text": "Brings hands to mouth"
+        },
+        {
+          "id": "holds_toy",
+          "months": 4,
+          "text": "Holds a toy put in their hand"
+        },
+        {
+          "id": "swats_toys",
+          "months": 4,
+          "text": "Swings arm at toys"
+        },
+        {
+          "id": "passes_hand_to_hand",
+          "months": 9,
+          "text": "Moves things from one hand to the other"
+        },
+        {
+          "id": "rakes_food",
+          "months": 9,
+          "text": "Uses fingers to rake food towards self"
+        },
+        {
+          "id": "pincer_grasp",
+          "months": 12,
+          "text": "Picks things up between thumb and pointer finger"
+        },
+        {
+          "id": "drinks_from_cup",
+          "months": 12,
+          "text": "Drinks from a cup without a lid, as you hold it"
+        }
+      ]
+    },
+    {
+      "id": "sitting",
+      "area": "movement",
+      "name": "Rolling & sitting",
+      "steps": [
+        {
+          "id": "rolls_over",
+          "months": 6,
+          "text": "Rolls from tummy to back"
+        },
+        {
+          "id": "leans_on_hands",
+          "months": 6,
+          "text": "Leans on hands for support when sitting"
+        },
+        {
+          "id": "sits_alone",
+          "months": 9,
+          "text": "Sits without support"
+        },
+        {
+          "id": "gets_to_sitting",
+          "months": 9,
+          "text": "Gets to a sitting position alone"
+        }
+      ]
+    },
+    {
+      "id": "standing",
+      "area": "movement",
+      "name": "Getting around & standing",
+      "steps": [
+        {
+          "id": "crawls",
+          "months": null,
+          "from_weeks": 27,
+          "optional": true,
+          "text": "Crawls (optional: not all babies crawl)"
+        },
+        {
+          "id": "pulls_to_stand",
+          "months": 12,
+          "text": "Pulls up to stand"
+        },
+        {
+          "id": "cruises",
+          "months": 12,
+          "text": "Walks holding on to furniture"
+        }
+      ]
+    }
+  ],
+  "stages": [
+    {
+      "id": "m0",
+      "from_weeks": 0,
+      "title": "Initial install",
+      "summary": "The system boots up: learning faces and voices, eating, sleeping and rebooting several times a day.",
+      "normal": [
+        "\"Crib not accepted\" mode: may wake when put down in the crib.",
+        "Low battery with no warning: gets fussy after being awake a long time.",
+        "Asks to feed more often on some days."
+      ],
+      "ideas": [
+        "Talk face to face when they're awake and calm.",
+        "A little tummy time, awake and always supervised.",
+        "Answer their sounds, as if you were chatting."
+      ],
+      "next": "First responsive smiles may be on the way."
+    },
+    {
+      "id": "m2",
+      "from_weeks": 9,
+      "title": "Smile update",
+      "summary": "More interaction: smiles on purpose, cooing and a big interest in their own hands.",
+      "normal": [
+        "Serious face mode: may just watch everything with deep focus.",
+        "Hands are the favorite new feature and go straight to the mouth.",
+        "Nap times still change from day to day."
+      ],
+      "ideas": [
+        "Take turns talking: you speak, wait, and let them answer their way.",
+        "Awake tummy time with toys in view.",
+        "Offer a toy for them to hold."
+      ],
+      "next": "Laughs and grabbing everything may be coming."
+    },
+    {
+      "id": "m4",
+      "from_weeks": 18,
+      "title": "Hands & laughs update",
+      "summary": "Grabs, tastes, laughs and starts to know their people.",
+      "normal": [
+        "Everything goes through mouth quality control (watch out for small objects).",
+        "High-volume raspberries, mealtimes included.",
+        "Gets easily distracted while feeding."
+      ],
+      "ideas": [
+        "Put safe toys within reach so they go after them.",
+        "Play in front of a mirror.",
+        "Repeat their sounds and let them answer."
+      ],
+      "next": "Steadier sitting may be coming."
+    },
+    {
+      "id": "m6",
+      "from_weeks": 27,
+      "title": "Mobility update",
+      "summary": "Sits, babbles eagerly and starts noticing who is around and who isn't.",
+      "normal": [
+        "New \"stranger shyness\" feature: may only want their own people.",
+        "Drops things to see if they come back. System testing.",
+        "May protest when you leave the room."
+      ],
+      "ideas": [
+        "Play peek-a-boo.",
+        "Name what they see and what they do.",
+        "Baby-proof: outlets, stairs and small objects."
+      ],
+      "next": "Standing, gestures and a special word may be coming."
+    },
+    {
+      "id": "m9",
+      "from_weeks": 39,
+      "title": "Almost-one release",
+      "summary": "Stands up, waves bye-bye and understands more than it seems.",
+      "normal": [
+        "Understands \"no\" and sometimes tests it anyway.",
+        "Finds the tiniest crumb on the floor.",
+        "Busier days can shift naps."
+      ],
+      "ideas": [
+        "Play pat-a-cake and wave goodbye.",
+        "Hide a toy under a blanket for them to find.",
+        "Give them blocks and a cup to fill and empty."
+      ],
+      "next": "First steps and more words usually come after the first year, each at their own pace."
+    }
+  ],
+  "notice": "This is a guide, not a test or a deadline: every baby has their own pace. If something worries you, if they lose skills they had, or if you have questions, talk to your pediatrician. Under 3 months, a fever of 38 °C (100.4 °F) or higher needs medical care right away."
+}

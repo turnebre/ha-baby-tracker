@@ -1,5 +1,5 @@
 {
-  "domain": "bebe",
+  "domain": "baby_tracker",
   "name": "Baby Tracker",
   "codeowners": [
     "@HertBox"
@@ -15,5 +15,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/HertBox/ha-baby-tracker/issues",
   "requirements": [],
-  "version": "1.2.0"
+  "version": "2.0.0"
 }

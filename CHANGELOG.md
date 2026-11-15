@@ -1,78 +1,93 @@
 # Changelog
 
-Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versionado semántico (MAYOR.MENOR.PARCHE).
-Mientras la versión sea 0.x, puede haber cambios incompatibles entre versiones menores.
+Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); semantic versioning (MAJOR.MINOR.PATCH).
+While the version is 0.x, minor versions may contain breaking changes.
+
+## [2.0.0] - English-only fork
+### Changed
+- The whole codebase is now English: identifiers, comments, SQLite tables and columns, stored values, services (actions),
+  entity keys, events, blueprints and docs. The Spanish UI translation was removed.
+- Integration domain `bebe` → `baby_tracker`; services are now `baby_tracker.log_feeding`, `baby_tracker.new_bottle`, etc.
+  (see `docs/GLOSSARY.md` for every old → new name).
+- Database file `bebe.db` → `baby_tracker.db` (additional babies: `baby_tracker_<id>.db`).
+- Blueprints live in `blueprints/automation/baby_tracker/` and are English only; notification action ids are `BABY_*`.
+- Milestone catalog (`www/milestones.json`) is English only and uses English ids.
+### Added
+- "Import data from a previous install" option when adding a baby: copies a legacy `bebe*.db` into the new English schema
+  (the original file is never modified).
+### Removed
+- Upgrade code for databases older than the Spanish schema v6 (use the importer instead).
 
 ## [1.2.0] - 2026-11-02
-### Agregado
-- Pestaña Desarrollo (Milestones): primer año de vida, semana por semana, con los 59 hitos de CDC de 2, 4, 6, 9 y 12 meses agrupados
-  en 14 habilidades. Se marca el día en que los notaron; hay progreso por habilidad, línea de tiempo y gráfica por área.
-  Las etapas, lo normal, las ideas y las semanas son texto propio orientativo, no de CDC.
-- Acciones `bebe.marcar_hito`, `bebe.desmarcar_hito` y `bebe.listar_hitos`.
-- Esquema de base v6 (tabla `hitos`), con copia automática antes de migrar.
+### Added
+- Milestones tab: first year of life, week by week, with the 59 CDC milestones for 2, 4, 6, 9 and 12 months grouped into
+  14 skills. You mark the day they noticed it; there is progress per skill, a timeline and a chart per area.
+  Stages, what is normal, ideas and weeks are our own guidance text, not CDC's.
+- Actions `mark_milestone`, `unmark_milestone` and `list_milestones`.
+- Database schema v6 (`milestones` table), with an automatic backup before migrating.
 
 ## [1.1.0] - 2026-10-05
-### Agregado
-- Referencia del día en **Hoy**: dos metas, **mínimo** e **ideal** (la menor y la mayor entre la del pediatra y la
-  referencia por peso; cada día se evalúa con el peso vigente ese día). La barra marca dónde debería ir a esta hora
-  (con margen de una toma), cuánto falta por toma para llegar a cada meta (sin sugerir más de lo indicado + 1 oz),
-  lo esperado en las próximas tomas del día y qué metas se cumplieron en los últimos 7 días.
-- Sensor `referencia_ahora` ("Referencia a esta hora"): lo esperado según el mínimo; el ideal, las metas, el plan de
-  próximas tomas y los días cumplidos van en atributos. La serie diaria de `oz_hoy` incluye `meta_minimo`,
-  `meta_ideal` y `logro` por día.
-- Gráficas: la de cantidad por día muestra las líneas del mínimo y del ideal (escalonadas cuando cambia el peso).
+### Added
+- Reference for the day in **Today**: two goals, **minimum** and **ideal** (the lower and higher of the pediatrician's goal and the
+  weight-based reference; each day is evaluated with the weight current on that day). The bar shows where the baby should be at this
+  time (with a one-feeding margin), how much is needed per feeding to reach each goal (never suggesting more than prescribed + 1 oz),
+  what is expected in the remaining feedings of the day and which goals were met in the last 7 days.
+- Sensor `reference_now` ("Reference at this time"): expected amount according to the minimum; the ideal, the goals, the plan for the
+  upcoming feedings and the days met go in attributes. The daily series of `oz_today` includes `goal_minimum`,
+  `goal_ideal` and `achievement` per day.
+- Charts: the amount-per-day chart shows the minimum and ideal lines (stepped when the weight changes).
 
 ## [1.0.0] - 2026-10-01
-Primera versión pública. Incluye todo lo de 0.4.0 y 0.5.0 (abajo).
-### Corregido
-- Dos mensajes de error tenían marcadores entre comillas simples (no lo permite la validación de Home Assistant).
+First public release. Includes everything from 0.4.0 and 0.5.0 (below).
+### Fixed
+- Two error messages had placeholders inside single quotes (not allowed by Home Assistant validation).
 
 ## [0.5.0] - 2026-10-01
-### Agregado
-- Leche materna desde la reserva: "＋ Materna" en Hoy pregunta qué biberón de la reserva usar (primero el que caduca antes)
-  cuando hay más de uno. Al registrar una toma de materna con biberón nuevo, o al cambiar un biberón a materna, el panel
-  pregunta de cuál de la reserva salió y la descuenta (o "No es de la reserva").
-- `registrar_toma` acepta `reserva_id` y `pausar_actual`; `corregir_biberon` acepta `reserva_id`.
-### Cambiado
-- El tipo de una toma es siempre el de su biberón (`tipo` en `registrar_toma` solo decide el de un biberón nuevo);
-  al cambiar el tipo de un biberón, sus tomas cambian también.
-### Corregido
-- Un biberón de materna creado a mano no descontaba la reserva (la leche quedaba ahí y luego contaba como desechada).
+### Added
+- Breast milk from the stash: "＋ Breast milk" in Today asks which stash bottle to use (soonest to expire first)
+  when there is more than one. When logging a breast milk feeding with a new bottle, or when switching a bottle to breast milk, the panel
+  asks which stash bottle it came from and deducts it (or "Not from the stash").
+- `log_feeding` accepts `stash_id` and `pause_current`; `correct_bottle` accepts `stash_id`.
+### Changed
+- A feeding's type is always its bottle's type (`type` in `log_feeding` only decides the type of a new bottle);
+  changing a bottle's type changes its feedings too.
+### Fixed
+- A breast milk bottle created by hand did not deduct the stash (the milk stayed there and later counted as wasted).
 
 ## [0.4.0] - 2026-10-01
-### Agregado
-- Varios bebés por instalación: una entrada por bebé, cada uno con su base de datos, sensores y ajustes.
-  Las acciones aceptan el campo `bebe` (id de la entrada o nombre); con un solo bebé es opcional.
-  El panel muestra un selector cuando hay más de un bebé (recuerda el último elegido en cada dispositivo).
-- Copia automática de la base antes de cada migración de esquema (`<base>.antes-vN`).
-- Los biberones creados automáticamente usan el tipo de leche principal del bebé.
-- Inglés: integración (formularios, sensores, acciones) y panel completo; el panel usa el idioma del usuario de Home Assistant.
-- Mensajes de error traducibles (sección `exceptions` en `translations/*.json`).
-- Blueprints (inglés/español): botón – toque suma al biberón; botón – mantener = biberón nuevo; recordatorio de toma con respuesta
-  desde la notificación; leche materna por caducar; botones de las notificaciones (deshacer, corregir, mover, respuestas);
-  voz vía lista de tareas + IA (opcional). Funcionan con varios bebés y con oz o ml.
-- Las respuestas de las acciones incluyen `bebe`, `nombre` y `unidad`; los sensores principales exponen `bebe_id`, `nombre` y `unidad`.
-### Corregido
-- El encabezado del panel podía trabarse al cambiar de bebé (recursión al actualizar la edad).
-### Compatibilidad
-- Instalaciones existentes siguen usando `bebe.db`; sus entidades, acciones y automatizaciones no cambian.
+### Added
+- Several babies per install: one entry per baby, each with its own database, sensors and settings.
+  Actions accept the `baby` field (entry id or name); optional with a single baby.
+  The panel shows a selector when there is more than one baby (it remembers the last one chosen on each device).
+- Automatic database backup before each schema migration (`<db>.before-vN`).
+- Automatically created bottles use the baby's main milk type.
+- English: integration (forms, sensors, actions) and the whole panel; the panel follows the Home Assistant user's language.
+- Translatable error messages (`exceptions` section in `translations/*.json`).
+- Blueprints: button press adds to the bottle; button hold = new bottle; feeding reminder answered from the
+  notification; breast milk about to expire; notification buttons (undo, edit, move, answers);
+  voice via to-do list + AI (optional). They work with several babies and with oz or ml.
+- Action responses include `baby`, `name` and `unit`; the main sensors expose `baby_id`, `name` and `unit`.
+### Fixed
+- The panel header could hang when switching babies (recursion when updating the age).
+### Compatibility
+- Existing installs keep using the original database file; their entities, actions and automations do not change.
 
 ## [0.3.0] - 2026-09-30
-### Agregado
-- Pañales: pipí, popó o ambos; color y consistencia para popó con valores habituales configurables.
-- Pantalla "Hoy" con última y siguiente toma destacadas; edición del tamaño del biberón en curso.
-- Métricas de ritmo (oz/h), distribución por hora del día y pañales por tipo.
-- Biberones en pausa: dar leche materna y continuar después con la fórmula.
-- Leche materna: extracciones, reserva (refrigerador / ambiente) con caducidad y avisos.
-- Opción "Configurar": nombre, fecha de nacimiento, sexo, unidad (oz/ml) y popó habitual.
-- Nombre del proyecto: Baby Tracker.
+### Added
+- Diapers: pee, poop or both; color and consistency for poop with configurable usual values.
+- "Today" screen with the last and next feeding highlighted; editing the size of the current bottle.
+- Rate metrics (oz/h), distribution by hour of day and diapers by type.
+- Paused bottles: give breast milk and continue later with formula.
+- Breast milk: pumping, stash (fridge / room temperature) with expiry and warnings.
+- "Configure" option: name, date of birth, sex, unit (oz/ml) and usual poop.
+- Project name: Baby Tracker.
 
 ## [0.2.0] - 2026-09-29
-### Agregado
-- Modelo de biberones con tomas incrementales (cada toma suma al biberón en curso).
-- Panel en la barra lateral: Hoy, Tomas, Medidas, Gráficas y Ajustes.
-- Meta diaria según la indicación del pediatra (oz por toma e intervalo).
+### Added
+- Bottle model with incremental feedings (each feeding adds to the current bottle).
+- Sidebar panel: Today, Feedings, Measurements, Charts and Settings.
+- Daily goal based on the pediatrician's guidance (oz per feeding and interval).
 
 ## [0.1.0] - 2026-09-28
-### Agregado
-- Integración inicial: registro de tomas y medidas en SQLite, sensores de KPIs.
+### Added
+- Initial integration: logging of feedings and measurements in SQLite, KPI sensors.
