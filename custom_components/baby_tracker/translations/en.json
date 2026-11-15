@@ -359,16 +359,16 @@
           "name": "Date",
           "description": "When it was measured (default now)."
         },
-        "weight_kg": {
-          "name": "Weight (kg)",
-          "description": "Weight in kilograms."
+        "weight_lb": {
+          "name": "Weight (lb)",
+          "description": "Weight in pounds."
         },
-        "height_cm": {
-          "name": "Length (cm)",
-          "description": "Length in centimeters."
+        "height_in": {
+          "name": "Length (in)",
+          "description": "Length in inches."
         },
-        "head_cm": {
-          "name": "Head circumference (cm)",
+        "head_in": {
+          "name": "Head circumference (in)",
           "description": "Head circumference."
         },
         "note": {
@@ -906,7 +906,7 @@
       "message": "Diaper {id} does not exist"
     },
     "missing_measurement": {
-      "message": "Provide at least weight_kg, height_cm or head_cm"
+      "message": "Provide at least weight_lb, height_in or head_in"
     },
     "measurement_not_found": {
       "message": "Measurement {id} does not exist"

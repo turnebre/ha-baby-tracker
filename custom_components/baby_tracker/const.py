@@ -25,6 +25,9 @@ TYPES = ["formula", "breast_milk", "mixed"]
 CONFIDENCES = ["exact", "estimated", "inferred"]
 
 ML_PER_OZ = 29.5735
+# Growth measurements are stored in kg/cm in the database and shown/entered in lb/in.
+LB_PER_KG = 2.20462262
+CM_PER_IN = 2.54
 # General weight-based reference (informational only): ~150 ml/kg/day, capped at ~32 oz/day.
 ML_PER_KG_DAY = 150
 OZ_DAY_MAX = 32

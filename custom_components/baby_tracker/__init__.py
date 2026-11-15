@@ -23,6 +23,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CM_PER_IN,
     CONF_DB,
     CONF_UNIT,
     CONF_BABY_NAME,
@@ -49,6 +50,7 @@ from .const import (
     DIAPER_TYPES,
     FUTURE_TOLERANCE_MIN,
     LOCATIONS,
+    LB_PER_KG,
     LIVE_WINDOW_MIN,
 )
 from .coordinator import BabyCoordinator, BabyRuntime
@@ -172,9 +174,9 @@ MILESTONE_ID_SCHEMA = vol.Schema({vol.Required("milestone_id"): cv.string})
 
 MEASUREMENT_SCHEMA = vol.Schema({
     vol.Optional("date"): cv.datetime,
-    vol.Optional("weight_kg"): vol.All(vol.Coerce(float), vol.Range(min=0.5, max=30)),
-    vol.Optional("height_cm"): vol.All(vol.Coerce(float), vol.Range(min=20, max=130)),
-    vol.Optional("head_cm"): vol.All(vol.Coerce(float), vol.Range(min=20, max=60)),
+    vol.Optional("weight_lb"): vol.All(vol.Coerce(float), vol.Range(min=1, max=66)),
+    vol.Optional("height_in"): vol.All(vol.Coerce(float), vol.Range(min=8, max=51)),
+    vol.Optional("head_in"): vol.All(vol.Coerce(float), vol.Range(min=8, max=24)),
     vol.Optional("note"): cv.string,
 })
 
@@ -521,19 +523,36 @@ async def _list_milestones(hass: HomeAssistant, call: ServiceCall) -> ServiceRes
 async def _log_measurement(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
     rt = _runtime(hass, call)
     d: dict[str, Any] = dict(call.data)
-    if not any(k in d for k in ("weight_kg", "height_cm", "head_cm")):
+    if not any(k in d for k in ("weight_lb", "height_in", "head_in")):
         raise _error("missing_measurement")
     d["date"] = _a_utc(d.get("date") or dt_util.now(), "date")
     d["logged_by"] = await _user(hass, call)
-    measurement_id = await _db(hass, rt.db.add_measurement, d)
+    stored = {k: v for k, v in d.items() if k not in ("weight_lb", "height_in", "head_in")}
+    if "weight_lb" in d:
+        stored["weight_kg"] = round(d["weight_lb"] / LB_PER_KG, 4)
+    if "height_in" in d:
+        stored["height_cm"] = round(d["height_in"] * CM_PER_IN, 3)
+    if "head_in" in d:
+        stored["head_cm"] = round(d["head_in"] * CM_PER_IN, 3)
+    measurement_id = await _db(hass, rt.db.add_measurement, stored)
     await rt.coordinator.async_refresh()
     hass.bus.async_fire(EVENT_MEASUREMENT, {"id": measurement_id, "baby": rt.coordinator.entry.entry_id, **d})
     return {"id": measurement_id}
 
 
+def _imperial(row: dict[str, Any]) -> dict[str, Any]:
+    """Convert a stored (kg/cm) measurement row to lb/in for the API."""
+    out = {k: v for k, v in row.items() if k not in ("weight_kg", "height_cm", "head_cm")}
+    for src, dst, factor in (("weight_kg", "weight_lb", LB_PER_KG), ("height_cm", "height_in", 1 / CM_PER_IN),
+                             ("head_cm", "head_in", 1 / CM_PER_IN)):
+        out[dst] = round(row[src] * factor, 2) if row.get(src) is not None else None
+    return out
+
+
 async def _list_measurements(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
     rt = _runtime(hass, call)
-    return {"measurements": await _db(hass, rt.db.measurements)}
+    rows = await _db(hass, rt.db.measurements)
+    return {"measurements": [_imperial(r) for r in rows]}
 
 
 async def _delete_measurement(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:

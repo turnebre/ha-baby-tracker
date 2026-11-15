@@ -30,7 +30,7 @@ Everything is stored **locally** in your Home Assistant (SQLite). No cloud, no a
 - **Charts** by day, week or month: amount per day (formula vs breast milk), feedings, amount per feeding, bottles,
   % finished, wasted formula, pumped milk, diapers, and *when* the baby eats / needs a change.
 - **Pediatrician's plan** — amount per feeding and interval; the daily goal and the reminder follow it.
-- **Growth** — weight, length and head circumference history.
+- **Growth** — weight (lb), length (in) and head circumference (in) history.
 - **Milestones** — first year, week by week: CDC milestones grouped into skills, tick them when you notice them and see progress by skill and area. A guide, not a test or a deadline.
 - **Several babies** (twins!) — one entry per baby, a selector in the panel.
 - **oz or ml** units.

@@ -19,7 +19,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import ML_PER_OZ
+from .const import CM_PER_IN, LB_PER_KG, ML_PER_OZ
 from .coordinator import BabyCoordinator
 from .entity import device_info
 
@@ -114,14 +114,14 @@ SENSORS: tuple[BabySensorDescription, ...] = (
     ),
     BabySensorDescription(
         key="weight", translation_key="weight", device_class=SensorDeviceClass.WEIGHT,
-        native_unit_of_measurement=UnitOfMass.KILOGRAMS, suggested_display_precision=2,
-        value=lambda d: d["weight"]["weight_kg"] if d["weight"] else None,
+        native_unit_of_measurement=UnitOfMass.POUNDS, suggested_display_precision=2,
+        value=lambda d: round(d["weight"]["weight_kg"] * LB_PER_KG, 3) if d["weight"] else None,
         attributes=lambda d: {"date": d["weight"]["date"]} if d["weight"] else {},
     ),
     BabySensorDescription(
         key="height", translation_key="height", device_class=SensorDeviceClass.DISTANCE,
-        native_unit_of_measurement=UnitOfLength.CENTIMETERS, suggested_display_precision=1,
-        value=lambda d: d["height"]["height_cm"] if d["height"] else None,
+        native_unit_of_measurement=UnitOfLength.INCHES, suggested_display_precision=1,
+        value=lambda d: round(d["height"]["height_cm"] / CM_PER_IN, 2) if d["height"] else None,
         attributes=lambda d: {"date": d["height"]["date"]} if d["height"] else {},
     ),
     BabySensorDescription(

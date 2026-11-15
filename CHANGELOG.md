@@ -3,6 +3,11 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); semantic versioning (MAJOR.MINOR.PATCH).
 While the version is 0.x, minor versions may contain breaking changes.
 
+## [Unreleased]
+### Changed
+- Growth metrics are entered and shown in pounds and inches (panel, `log_measurement` fields `weight_lb`/`height_in`/`head_in`,
+  `list_measurements` output, weight/length sensors). The database still stores kg/cm, so existing data is unaffected.
+
 ## [2.0.0] - English-only fork
 ### Changed
 - The whole codebase is now English: identifiers, comments, SQLite tables and columns, stored values, services (actions),
