@@ -39,7 +39,7 @@ const num = (v, d = 1) => (v === null || v === undefined || v === "" || isNaN(v)
 const dateISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const toInputLocal = (d) => `${dateISO(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const toServiceDate = (v) => v.replace("T", " ") + (v.length === 16 ? ":00" : "");
-const hhmm = (iso) => { const d = new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const hhmm = (iso) => { const d = new Date(iso); const h = d.getHours(); return `${h % 12 || 12}:${pad(d.getMinutes())} ${h < 12 ? "AM" : "PM"}`; };
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -1442,7 +1442,7 @@ class BabyPanel extends HTMLElement {
     const days7 = Math.max(1, Math.min(7, Math.round((addDays(today, 1) - (sinceData > ago7 ? sinceData : ago7)) / 86400000)));
     const hours = [...Array(24).keys()];
     const perHour = (list, f) => hours.map((h) => list.filter((x) => new Date(x.ended_at).getHours() === h).reduce((s, x) => s + f(x), 0) / days7);
-    const hourLabels = hours.map((h) => (h % 3 === 0 ? `${h}h` : ""));
+    const hourLabels = hours.map((h) => (h % 3 === 0 ? `${h % 12 || 12}${h < 12 ? "a" : "p"}` : ""));
     r.getElementById("g-hhmm-oz").innerHTML = bars({ labels: hourLabels, unit: U(), height: 150,
       series: [{ name: U(), values: perHour(t7, (tm) => toUnit(tm.oz_taken)), color: "var(--primary-color)" }] });
     r.getElementById("g-hhmm-pan").innerHTML = bars({ labels: hourLabels, unit: t("diapers"), height: 140,
@@ -1502,7 +1502,7 @@ input, select { font:inherit; font-size:16px; padding:9px 10px; border-radius:8p
 .summary-day { display:flex; justify-content:space-around; text-align:center; padding-bottom:10px; border-bottom:1px solid var(--divider-color); }
 .summary-day b { font-size:20px; }
 .list { list-style:none; margin:0; padding:0; }
-.list li { display:grid; grid-template-columns:56px 1fr auto; grid-template-areas:"hhmm oz badge" "hhmm goal source";
+.list li { display:grid; grid-template-columns:78px 1fr auto; grid-template-areas:"hhmm oz badge" "hhmm goal source";
   gap:2px 8px; padding:10px 4px; border-bottom:1px solid var(--divider-color); cursor:pointer; align-items:center; }
 .list li.measurement { grid-template-areas:"hhmm oz badge" "hhmm goal badge"; cursor:default; }
 .hhmm { grid-area:hhmm; font-weight:500; font-size:16px; } .oz { grid-area:oz; font-weight:500; }
@@ -1567,7 +1567,7 @@ input, select { font:inherit; font-size:16px; padding:9px 10px; border-radius:8p
 .badge.formula { background:rgba(3,155,229,.15); color:var(--info-color, #0277bd); }
 .badge.fridge { background:rgba(3,155,229,.15); color:var(--info-color, #0277bd); }
 .badge.room { background:rgba(255,152,0,.2); color:var(--warning-color, #e65100); }
-.list li.stash { grid-template-columns:64px 1fr; grid-template-areas:"hhmm oz" "hhmm goal" "acc acc"; cursor:default; }
+.list li.stash { grid-template-columns:84px 1fr; grid-template-areas:"hhmm oz" "hhmm goal" "acc acc"; cursor:default; }
 .list li.stash.expired { opacity:.75; }
 .actions { grid-area:acc; display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
 .actions .chip { padding:6px 12px; font-size:14px; min-width:0; }
@@ -1580,7 +1580,7 @@ h2.sep { margin-top:18px; }
 .hero-col { background:var(--card-background-color); border-radius:14px; padding:14px; box-shadow:var(--ha-card-box-shadow, 0 1px 3px rgba(0,0,0,.15)); }
 .hero-col.overdue { outline:2px solid var(--error-color, #db4437); }
 .hero-col.overdue .hero-hhmm { color:var(--error-color, #db4437); }
-.hero-hhmm { font-size:34px; font-weight:600; line-height:1.1; margin:4px 0; }
+.hero-hhmm { font-size:28px; font-weight:600; line-height:1.1; margin:4px 0; }
 .chips.large .chip { flex:1; font-size:18px; padding:14px 8px; }
 .chip.active { background:var(--primary-color); color:var(--text-primary-color, #fff); border-color:var(--primary-color); }
 .shows { display:inline-block; width:12px; height:12px; border-radius:50%; border:1px solid var(--divider-color); margin-right:6px; vertical-align:-1px; }
