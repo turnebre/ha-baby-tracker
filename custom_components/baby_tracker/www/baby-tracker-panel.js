@@ -320,7 +320,12 @@ class BabyPanel extends HTMLElement {
     const b = this._bottle(), ozDefault = this._num("oz_per_bottle") ?? 3;
     const rs = this._st("stash_oz"), stashN = rs ? rs.attributes.current : 0;
     const remaining = b ? b.remaining : ozDefault;
-    const chips = [[0.5, "½"], [1, "1"], [1.5, "1½"], [2, "2"], [2.5, "2½"]].filter(([v]) => v < remaining);
+    // Descending in ½ steps from what is left in the bottle, 5 chips after it (6 options in total);
+    // the "What was left" chip below covers the exact remaining amount
+    const chips = [];
+    for (let v = Math.ceil(remaining * 2) / 2 - 0.5; v >= 0.5 && chips.length < 5; v -= 0.5) {
+      chips.push([v, `${Math.floor(v) || ""}${v % 1 ? "½" : ""}`]);
+    }
     el.innerHTML = `
       <div class="row-title"><h2>${t("Current bottle")} ${b ? `<span class="badge ${b.type || "formula"}">${TYPES[b.type] || TYPES.formula}</span>` : ""}</h2></div>
       <div class="new">
@@ -348,8 +353,8 @@ class BabyPanel extends HTMLElement {
         </div>`).join("")}
       <div class="label question">${t("How much did baby drink?")}</div>
       <div class="chips" id="chips-feeding">
-        ${chips.map(([v, e]) => `<button class="chip" data-oz="${v}">${isMl() ? amount(v) : `${e} oz`}</button>`).join("")}
         <button class="chip strong" data-oz="rest">${t("What was left ({c})", { c: amount(remaining, 2) })}</button>
+        ${chips.map(([v, e]) => `<button class="chip" data-oz="${v}">${isMl() ? amount(v) : `${e} oz`}</button>`).join("")}
         <button class="chip" data-oz="other">${t("Other…")}</button>
       </div>`;
     el.querySelector("#new-bottle").onclick = () => this._newBottle();
