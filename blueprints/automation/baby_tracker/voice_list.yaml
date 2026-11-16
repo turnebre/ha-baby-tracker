@@ -1,0 +1,155 @@
+blueprint:
+  name: "Baby Tracker – voice via a to-do list + AI (optional)"
+  description: >-
+    For voice assistants that can add items to a to-do list (e.g. Alexa lists synced to Home Assistant).
+    Each new item (e.g. "drank one ounce", "finished the bottle", "new bottle") is interpreted by an AI Task
+    entity, logged with the current time, and removed from the list. If the AI fails, the item stays in the
+    list and you get a notification. Requires an AI Task integration (e.g. Google Generative AI, OpenAI).
+  domain: automation
+  source_url: https://github.com/turnebre/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/voice_list.yaml
+  input:
+    list:
+      name: To-do list
+      selector:
+        entity:
+          filter:
+            - domain: todo
+    ia:
+      name: AI Task entity
+      selector:
+        entity:
+          filter:
+            - domain: ai_task
+    baby:
+      name: Baby
+      description: Only needed if you track more than one baby.
+      default: ""
+      selector:
+        config_entry:
+          integration: baby_tracker
+    phones:
+      name: Phones to notify
+      default: []
+      selector:
+        device:
+          integration: mobile_app
+          multiple: true
+
+mode: queued
+max: 10
+
+triggers:
+  - trigger: state
+    entity_id: !input list
+
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.state | int(0) > trigger.from_state.state | int(0) }}"
+
+variables:
+  list: !input list
+  ia: !input ia
+  baby: !input baby
+  phones: !input phones
+  services: >-
+    {{ phones | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
+
+actions:
+  - action: todo.get_items
+    target:
+      entity_id: "{{ list }}"
+    data:
+      status: needs_action
+    response_variable: pending
+  - repeat:
+      for_each: "{{ pending[list]['items'] }}"
+      sequence:
+        - variables:
+            item: "{{ repeat.item }}"
+            d: {}
+        # The free AI sometimes fails: retry up to 3 times
+        - repeat:
+            sequence:
+              - action: ai_task.generate_data
+                continue_on_error: true
+                response_variable: res
+                data:
+                  entity_id: "{{ ia }}"
+                  task_name: baby_tracker_voice
+                  instructions: >-
+                    You extract data for a baby bottle-feeding log. Text dictated to a voice assistant (may contain
+                    transcription errors; any language): "{{ item.summary }}".
+                    Rules: ignore any time mentioned (the current time is used). "drank X" / "took X" → oz_taken = X
+                    (in ounces; convert ml to oz dividing by 29.57). "finished the bottle" → what_was_left = true.
+                    "X left" / "leftover X" → oz_leftover = X. "new bottle" / "bottle new" → new_bottle = true.
+                    "half" = 0.5. Do not invent amounts. type: formula, breast_milk (breast milk) or mixed, else empty.
+                    is_feeding = false if the text is clearly not about feeding.
+                  structure:
+                    is_feeding: {selector: {boolean: {}}, required: true}
+                    oz_taken: {selector: {number: {min: 0, max: 12, step: 0.25}}}
+                    what_was_left: {selector: {boolean: {}}}
+                    oz_leftover: {selector: {number: {min: 0, max: 12, step: 0.25}}}
+                    new_bottle: {selector: {boolean: {}}}
+                    type: {selector: {select: {options: [formula, breast_milk, mixed]}}}
+              - variables:
+                  d: "{{ res.data if res is defined and res.data is mapping else {} }}"
+              - if: "{{ d == {} and repeat.index < 3 }}"
+                then:
+                  - delay: 5
+            until: "{{ d != {} or repeat.index >= 3 }}"
+        - variables:
+            oz: "{{ d.get('oz_taken') if d.get('oz_taken') is number and 0 < d.get('oz_taken') <= 12 else none }}"
+            leftover: "{{ 0 if d.get('what_was_left') else (d.get('oz_leftover') if d.get('oz_leftover') is number else none) }}"
+            new: "{{ d.get('new_bottle', false) is true }}"
+            data: >-
+              {%- set x = {'source': 'voice', 'note': item.summary, 'new_bottle': new, 'baby': baby} -%}
+              {%- if oz is not none -%}{%- set x = dict(x, oz_taken=oz) -%}{%- elif leftover is not none -%}{%- set x = dict(x, oz_leftover=leftover) -%}{%- endif -%}
+              {%- if d.get('type') in ['formula', 'breast_milk', 'mixed'] -%}{%- set x = dict(x, type=d.type) -%}{%- endif -%}
+              {{ x }}
+        - choose:
+            - conditions: "{{ d.get('is_feeding') and (oz is not none or leftover is not none) }}"
+              sequence:
+                - action: baby_tracker.log_feeding
+                  data: "{{ data }}"
+                  response_variable: r
+                - action: todo.remove_item
+                  target:
+                    entity_id: "{{ list }}"
+                  data:
+                    item: "{{ item.uid }}"
+                - variables:
+                    u: "{{ r.unit }}"
+                - repeat:
+                    for_each: "{{ services }}"
+                    sequence:
+                      - action: "{{ repeat.item }}"
+                        continue_on_error: true
+                        data:
+                          title: "🍼 {{ r.name }}"
+                          message: >-
+                            {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+                            {{ 'Drank' }} {{ c(r.oz_taken) }} · {{ 'Bottle' }} {{ c(r.bottle.consumed) }} / {{ c(r.bottle.oz) }} · "{{ item.summary }}"
+                          data:
+                            tag: "baby_feeding_{{ r.baby }}"
+                            actions:
+                              - action: "BABY_UNDO_{{ r.id }}__{{ r.baby }}"
+                                title: "{{ 'Undo' }}"
+            - conditions: "{{ d.get('is_feeding') and new }}"
+              sequence:
+                - action: baby_tracker.new_bottle
+                  data:
+                    baby: "{{ baby }}"
+                - action: todo.remove_item
+                  target:
+                    entity_id: "{{ list }}"
+                  data:
+                    item: "{{ item.uid }}"
+          default:
+            - repeat:
+                for_each: "{{ services }}"
+                sequence:
+                  - action: "{{ repeat.item }}"
+                    continue_on_error: true
+                    data:
+                      title: "🍼 {{ 'Could not understand' }}"
+                      message: "\"{{ item.summary }}\" — {{ 'it stays in the list' }}"

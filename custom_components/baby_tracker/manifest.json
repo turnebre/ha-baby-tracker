@@ -1,8 +1,8 @@
 {
-  "domain": "bebe",
+  "domain": "baby_tracker",
   "name": "Baby Tracker",
   "codeowners": [
-    "@HertBox"
+    "@turnebre"
   ],
   "config_flow": true,
   "dependencies": [
@@ -10,10 +10,10 @@
     "http",
     "panel_custom"
   ],
-  "documentation": "https://github.com/HertBox/ha-baby-tracker",
+  "documentation": "https://github.com/turnebre/ha-baby-tracker",
   "integration_type": "service",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/HertBox/ha-baby-tracker/issues",
+  "issue_tracker": "https://github.com/turnebre/ha-baby-tracker/issues",
   "requirements": [],
-  "version": "1.2.0"
+  "version": "2.1.0"
 }

@@ -4,85 +4,94 @@
       "user": {
         "title": "Baby Tracker",
         "data": {
-          "nombre": "Name",
-          "fecha_nacimiento": "Date of birth",
+          "name": "Name",
+          "birth_date": "Date of birth",
           "oz_default": "Usual bottle size (oz)",
-          "tipo_default": "Main milk type",
-          "sexo": "Sex (for growth charts)",
-          "color_popo_default": "Usual poop color (preselected)",
-          "consistencia_popo_default": "Usual poop consistency (preselected)",
-          "unidad": "Unit"
+          "type_default": "Main milk type",
+          "sex": "Sex (for growth charts)",
+          "poop_color_default": "Usual poop color (preselected)",
+          "poop_consistency_default": "Usual poop consistency (preselected)",
+          "unit": "Unit",
+          "import_db": "Import data from a previous install (optional)"
         },
-        "description": "Your baby's details. You can change them later in “Configure”."
+        "description": "Your baby's details. You can change them later in “Configure”.",
+        "data_description": {
+          "import_db": "Pick a bebe*.db file from your config folder to copy its history into this baby. The original file is not modified."
+        }
       }
     },
     "abort": {
       "single_instance_allowed": "Already configured."
+    },
+    "error": {
+      "import_failed": "The database could not be imported. Check the Home Assistant log.",
+      "import_unsupported_version": "That database is not from a compatible version of the previous Spanish integration (schema v5 or v6).",
+      "import_destination_exists": "The new database file already exists."
     }
   },
   "selector": {
-    "tipo": {
+    "type": {
       "options": {
         "formula": "Formula",
-        "materna": "Breast milk",
-        "mixta": "Mixed"
+        "breast_milk": "Breast milk",
+        "mixed": "Mixed"
       }
     },
-    "confianza": {
+    "confidence": {
       "options": {
-        "exacto": "Exact",
-        "estimado": "Estimated",
-        "inferido": "Inferred"
+        "exact": "Exact",
+        "estimated": "Estimated",
+        "inferred": "Inferred"
       }
     },
-    "mover": {
+    "move": {
       "options": {
-        "nuevo": "To a new bottle",
-        "anterior": "To the previous bottle"
+        "new": "To a new bottle",
+        "previous": "To the previous bottle"
       }
     },
-    "ubicacion": {
+    "location": {
       "options": {
-        "refrigerador": "Fridge",
-        "ambiente": "Room temperature"
+        "fridge": "Fridge",
+        "room": "Room temperature"
       }
     },
-    "tipo_panal": {
+    "diaper_type": {
       "options": {
-        "pipi": "Pee",
-        "popo": "Poop",
-        "ambos": "Both"
+        "pee": "Pee",
+        "poop": "Poop",
+        "both": "Both"
       }
     },
-    "color_popo": {
+    "poop_color": {
       "options": {
-        "amarillo": "Yellow",
-        "verde": "Green",
-        "cafe": "Brown",
-        "naranja": "Orange",
-        "negro": "Black",
-        "rojo": "Red",
-        "blanco": "White / gray",
-        "no_se": "Not sure"
+        "yellow": "Yellow",
+        "green": "Green",
+        "brown": "Brown",
+        "orange": "Orange",
+        "black": "Black",
+        "red": "Red",
+        "white": "White / gray",
+        "not_sure": "Not sure"
       }
     },
-    "consistencia_popo": {
+    "poop_consistency": {
       "options": {
-        "liquida": "Watery",
-        "grumosa": "Seedy",
-        "pastosa": "Pasty",
-        "dura": "Hard",
-        "no_se": "Not sure"
+        "watery": "Watery",
+        "seedy": "Seedy",
+        "pasty": "Pasty",
+        "hard": "Hard",
+        "not_sure": "Not sure"
       }
     },
-    "sexo": {
+    "sex": {
       "options": {
-        "nino": "Boy",
-        "nina": "Girl",
-        "sin_especificar": "Not specified"
+        "boy": "Boy",
+        "girl": "Girl",
+        "unspecified": "Not specified"
       }
     },
-    "unidad": {
+    "unit": {
       "options": {
         "oz": "Ounces (oz)",
         "ml": "Milliliters (ml)"
@@ -90,193 +99,201 @@
     }
   },
   "entity": {
+    "time": {
+      "night_start": {
+        "name": "Bedtime (night starts)"
+      },
+      "night_end": {
+        "name": "Wake-up (night ends)"
+      }
+    },
     "number": {
-      "oz_por_biberon": {
+      "oz_per_bottle": {
         "name": "Bottle size"
       },
-      "meta_oz_toma": {
-        "name": "Goal per feeding (pediatrician)"
+      "daily_goal": {
+        "name": "Daily goal (pediatrician)"
       },
-      "intervalo_indicado": {
-        "name": "Recommended interval (pediatrician)"
+      "prescribed_interval": {
+        "name": "Daytime feeding interval (pediatrician)"
       },
-      "limite_biberon": {
+      "bottle_limit": {
         "name": "Limit to use a started bottle"
       },
-      "limite_materna": {
+      "breast_milk_limit": {
         "name": "Started breast milk limit"
       },
-      "caducidad_ambiente": {
+      "room_expiry": {
         "name": "Breast milk shelf life at room temperature"
       },
-      "caducidad_refri": {
+      "fridge_expiry": {
         "name": "Breast milk shelf life in the fridge"
       }
     },
     "sensor": {
-      "ultima_toma": {
+      "last_feeding": {
         "name": "Last feeding"
       },
-      "ultima_toma_oz": {
+      "last_feeding_oz": {
         "name": "Last feeding amount"
       },
-      "proxima_toma": {
+      "next_feeding": {
         "name": "Next feeding"
       },
-      "oz_hoy": {
+      "oz_today": {
         "name": "Today"
       },
-      "tomas_hoy": {
+      "feedings_today": {
         "name": "Feedings today"
       },
       "oz_24h": {
         "name": "Last 24 h"
       },
-      "promedio_7d": {
+      "average_7d": {
         "name": "Daily average (7 days)"
       },
-      "intervalo": {
+      "interval": {
         "name": "Time between feedings"
       },
-      "meta_oz_dia": {
+      "goal_oz_day": {
         "name": "Daily goal"
       },
-      "avance_meta": {
+      "goal_progress": {
         "name": "Goal progress"
       },
-      "referencia_ahora": {
+      "reference_now": {
         "name": "Expected by now"
       },
-      "peso": {
+      "weight": {
         "name": "Weight"
       },
-      "talla": {
+      "height": {
         "name": "Length"
       },
-      "edad": {
+      "age": {
         "name": "Age"
       },
-      "biberon_restante": {
+      "bottle_remaining": {
         "name": "Current bottle: remaining"
       },
-      "biberon_vence": {
+      "bottle_use_by": {
         "name": "Current bottle: use by"
       },
-      "oz_por_toma": {
+      "oz_per_feeding": {
         "name": "Per feeding (7 days)"
       },
-      "tomas_por_dia": {
+      "feedings_per_day": {
         "name": "Feedings per day (7 days)"
       },
-      "biberones_hoy": {
+      "bottles_today": {
         "name": "Bottles today"
       },
-      "pct_terminados": {
+      "pct_finished": {
         "name": "Bottles finished (7 days)"
       },
-      "desechado_7d": {
+      "wasted_7d": {
         "name": "Formula wasted (7 days)"
       },
-      "materna_hoy": {
+      "breast_milk_today": {
         "name": "Breast milk today"
       },
-      "formula_hoy": {
+      "formula_today": {
         "name": "Formula today"
       },
-      "extraido_hoy": {
+      "pumped_today": {
         "name": "Pumped today"
       },
-      "extraido_dia": {
+      "pumped_day": {
         "name": "Average pumped per day (7 days)"
       },
-      "reserva_oz": {
+      "stash_oz": {
         "name": "Breast milk stash"
       },
-      "reserva_caduca": {
+      "stash_expires": {
         "name": "Stash: next expiry"
       },
-      "materna_desechada_7d": {
+      "breast_milk_wasted_7d": {
         "name": "Breast milk wasted (7 days)"
       },
-      "ritmo_oz_hora": {
+      "oz_per_hour": {
         "name": "Rate (per hour, 24 h)"
       },
-      "ultimo_panal": {
+      "last_diaper": {
         "name": "Last diaper"
       },
-      "ultimo_pipi": {
+      "last_pee": {
         "name": "Last pee"
       },
-      "ultima_popo": {
+      "last_poop": {
         "name": "Last poop"
       },
-      "panales_hoy": {
+      "diapers_today": {
         "name": "Diapers today"
       },
-      "panales_por_dia": {
+      "diapers_per_day": {
         "name": "Diapers per day (7 days)"
       },
-      "intervalo_panales": {
+      "diaper_interval": {
         "name": "Time between diapers"
       }
     }
   },
   "services": {
-    "registrar_toma": {
+    "log_feeding": {
       "name": "Log feeding",
       "description": "Adds the amount taken to the current bottle (always a continuation). Any excess goes to a new bottle.",
       "fields": {
-        "oz_tomadas": {
+        "oz_taken": {
           "name": "Amount taken",
           "description": "What was taken in this feeding."
         },
-        "oz_sobrantes": {
+        "oz_leftover": {
           "name": "Left in the bottle",
           "description": "Alternative to amount taken: drank what was left minus this (0 = finished what was left)."
         },
-        "nuevo_biberon": {
+        "new_bottle": {
           "name": "New bottle",
           "description": "Starts a new bottle before logging (the previous one is left incomplete)."
         },
-        "fin": {
+        "ended_at": {
           "name": "Time",
           "description": "When the feeding ended (default now)."
         },
-        "acumular_segundos": {
+        "accumulate_seconds": {
           "name": "Accumulate (s)",
           "description": "If the bottle's last feeding is from the same source and newer than this, it is added to it."
         },
-        "tipo": {
+        "type": {
           "name": "Type",
           "description": "Formula, breast milk or mixed."
         },
-        "confianza": {
+        "confidence": {
           "name": "Confidence",
           "description": "Exact, estimated or inferred."
         },
-        "fuente": {
+        "source": {
           "name": "Source",
           "description": "button, voice, app, notification…"
         },
-        "nota": {
+        "note": {
           "name": "Note",
           "description": "Free text."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         },
-        "reserva_id": {
+        "stash_id": {
           "name": "Stash bottle",
           "description": "The feeding is from this breast milk stash bottle (see List stash), which becomes the current bottle."
         },
-        "pausar_actual": {
+        "pause_current": {
           "name": "Pause current bottle",
           "description": "With a stash bottle: keep the current bottle paused to continue it afterwards (off = discard it)."
         }
       }
     },
-    "corregir_toma": {
+    "correct_feeding": {
       "name": "Edit feeding",
       "description": "Edits a feeding or moves it to another bottle. Without 'id' edits the last one.",
       "fields": {
@@ -284,37 +301,37 @@
           "name": "ID",
           "description": "Feeding ID (default the last one)."
         },
-        "fin": {
+        "ended_at": {
           "name": "Time",
           "description": "New time."
         },
-        "oz_tomadas": {
+        "oz_taken": {
           "name": "Amount taken",
           "description": "New amount."
         },
-        "tipo": {
+        "type": {
           "name": "Type",
           "description": "Formula, breast milk or mixed."
         },
-        "confianza": {
+        "confidence": {
           "name": "Confidence",
           "description": "Exact, estimated or inferred."
         },
-        "nota": {
+        "note": {
           "name": "Note",
           "description": "Free text."
         },
-        "mover": {
+        "move": {
           "name": "Move",
-          "description": "'nuevo': this feeding and the following ones move to a new bottle; 'anterior': it joins the previous bottle."
+          "description": "'new': this feeding and the following ones move to a new bottle; 'previous': it joins the previous bottle."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "borrar_toma": {
+    "delete_feeding": {
       "name": "Delete feeding",
       "description": "Deletes a feeding (can be restored). Without 'id' deletes the last one.",
       "fields": {
@@ -322,13 +339,13 @@
           "name": "ID",
           "description": "Feeding ID (default the last one)."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "restaurar_toma": {
+    "restore_feeding": {
       "name": "Restore feeding",
       "description": "Restores a deleted feeding.",
       "fields": {
@@ -336,43 +353,43 @@
           "name": "ID",
           "description": "Deleted feeding ID."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "registrar_medida": {
+    "log_measurement": {
       "name": "Log measurement",
       "description": "Logs weight, length and/or head circumference.",
       "fields": {
-        "fecha": {
+        "date": {
           "name": "Date",
           "description": "When it was measured (default now)."
         },
-        "peso_kg": {
-          "name": "Weight (kg)",
-          "description": "Weight in kilograms."
+        "weight_lb": {
+          "name": "Weight (lb)",
+          "description": "Weight in pounds."
         },
-        "talla_cm": {
-          "name": "Length (cm)",
-          "description": "Length in centimeters."
+        "height_in": {
+          "name": "Length (in)",
+          "description": "Length in inches."
         },
-        "perimetro_cm": {
-          "name": "Head circumference (cm)",
+        "head_in": {
+          "name": "Head circumference (in)",
           "description": "Head circumference."
         },
-        "nota": {
+        "note": {
           "name": "Note",
           "description": "Free text."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "borrar_medida": {
+    "delete_measurement": {
       "name": "Delete measurement",
       "description": "Deletes a weight/length measurement.",
       "fields": {
@@ -380,45 +397,45 @@
           "name": "ID",
           "description": "Measurement ID."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "listar_tomas": {
+    "list_feedings": {
       "name": "List feedings",
       "description": "Returns feedings between two dates.",
       "fields": {
-        "desde": {
+        "since": {
           "name": "From",
           "description": "Start of range."
         },
-        "hasta": {
+        "until": {
           "name": "To",
           "description": "End of range (exclusive)."
         },
-        "borradas": {
+        "deleted": {
           "name": "Include deleted",
           "description": "Include deleted feedings."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "listar_medidas": {
+    "list_measurements": {
       "name": "List measurements",
       "description": "Returns all logged measurements.",
       "fields": {
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "nuevo_biberon": {
+    "new_bottle": {
       "name": "New bottle",
       "description": "Starts a new bottle; the previous one is left incomplete and its remainder counts as wasted.",
       "fields": {
@@ -426,17 +443,17 @@
           "name": "Amount",
           "description": "Size (default: the usual bottle size)."
         },
-        "tipo": {
+        "type": {
           "name": "Type",
           "description": "Formula, breast milk or mixed."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "cerrar_biberon": {
+    "close_bottle": {
       "name": "Close bottle",
       "description": "Closes the bottle (discards what is left). Without 'id', the current one.",
       "fields": {
@@ -444,13 +461,13 @@
           "name": "ID",
           "description": "Bottle ID."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "borrar_biberon": {
+    "delete_bottle": {
       "name": "Undo bottle",
       "description": "Deletes a bottle without feedings and reopens the previous one.",
       "fields": {
@@ -458,13 +475,13 @@
           "name": "ID",
           "description": "Bottle ID."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "corregir_biberon": {
+    "correct_bottle": {
       "name": "Edit bottle",
       "description": "Changes a bottle's size, type or note, or reopens it.",
       "fields": {
@@ -476,55 +493,55 @@
           "name": "Amount",
           "description": "Size."
         },
-        "tipo": {
+        "type": {
           "name": "Type",
           "description": "Formula, breast milk or mixed."
         },
-        "nota": {
+        "note": {
           "name": "Note",
           "description": "Free text."
         },
-        "reabrir": {
+        "reopen": {
           "name": "Reopen",
           "description": "Reopens a closed bottle."
         },
-        "hecho": {
+        "made_at": {
           "name": "Made",
           "description": "When it was made (breast milk)."
         },
-        "ubicacion": {
+        "location": {
           "name": "Where it is stored",
           "description": "Fridge or room temperature."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         },
-        "reserva_id": {
+        "stash_id": {
           "name": "From stash bottle",
           "description": "This bottle was made from that stash bottle: it becomes breast milk with its details, and the stash bottle is removed (not counted as wasted)."
         }
       }
     },
-    "listar_biberones": {
+    "list_bottles": {
       "name": "List bottles",
       "description": "Returns bottles prepared between two dates.",
       "fields": {
-        "desde": {
+        "since": {
           "name": "From",
           "description": "Start of range."
         },
-        "hasta": {
+        "until": {
           "name": "To",
           "description": "End of range (exclusive)."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "guardar_leche": {
+    "save_milk": {
       "name": "Save breast milk",
       "description": "Adds a breast milk bottle to the stash (it is not the current bottle until used).",
       "fields": {
@@ -532,25 +549,25 @@
           "name": "Amount",
           "description": "Bottle amount."
         },
-        "hecho": {
+        "made_at": {
           "name": "Made",
           "description": "When it was made (default now)."
         },
-        "ubicacion": {
+        "location": {
           "name": "Where it is stored",
           "description": "Fridge or room temperature."
         },
-        "nota": {
+        "note": {
           "name": "Note",
           "description": "Free text."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "usar_reserva": {
+    "use_stash": {
       "name": "Use stash milk",
       "description": "The stash bottle becomes the current bottle. Without id, the oldest one not expired.",
       "fields": {
@@ -558,17 +575,17 @@
           "name": "ID",
           "description": "Stash bottle."
         },
-        "pausar_actual": {
+        "pause_current": {
           "name": "Pause the current bottle",
           "description": "Yes: the current bottle is paused to continue later. No: what is left is discarded."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "mover_reserva": {
+    "move_stash": {
       "name": "Move stash milk",
       "description": "Changes where a stash bottle is stored.",
       "fields": {
@@ -576,17 +593,17 @@
           "name": "ID",
           "description": "Stash bottle."
         },
-        "ubicacion": {
+        "location": {
           "name": "Where",
           "description": "Fridge or room temperature."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "descartar_reserva": {
+    "discard_stash": {
       "name": "Discard stash milk",
       "description": "Discards a stash bottle (counts as wasted milk).",
       "fields": {
@@ -594,55 +611,55 @@
           "name": "ID",
           "description": "Stash bottle."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "registrar_extraccion": {
+    "log_pumping": {
       "name": "Log pumping session",
       "description": "Logs a pumping session and optionally saves it as stash bottles.",
       "fields": {
-        "fin": {
+        "ended_at": {
           "name": "Time",
           "description": "When it ended (default now)."
         },
-        "oz_izq": {
+        "oz_left": {
           "name": "Left side amount",
           "description": "Left side."
         },
-        "oz_der": {
+        "oz_right": {
           "name": "Right side amount",
           "description": "Right side."
         },
-        "duracion_min": {
+        "duration_min": {
           "name": "Duration (min)",
           "description": "Pumping minutes."
         },
-        "guardar": {
+        "save": {
           "name": "Save to stash",
           "description": "Create stash bottles with this milk."
         },
-        "biberones": {
+        "bottles": {
           "name": "Split into bottles",
           "description": "List of amounts per bottle, e.g. [2, 1.5]. If omitted: one bottle with the total."
         },
-        "ubicacion": {
+        "location": {
           "name": "Where it is stored",
           "description": "Fridge or room temperature."
         },
-        "nota": {
+        "note": {
           "name": "Note",
           "description": "Free text."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "borrar_extraccion": {
+    "delete_pumping": {
       "name": "Delete pumping session",
       "description": "Deletes a pumping session and its unused stash bottles.",
       "fields": {
@@ -650,41 +667,41 @@
           "name": "ID",
           "description": "Pumping session ID."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "listar_reservas": {
+    "list_stashes": {
       "name": "List stash",
       "description": "Returns the breast milk bottles in the stash.",
       "fields": {
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "listar_extracciones": {
+    "list_pumpings": {
       "name": "List pumping sessions",
       "description": "Returns pumping sessions between two dates.",
       "fields": {
-        "desde": {
+        "since": {
           "name": "From",
           "description": "Start of range."
         },
-        "hasta": {
+        "until": {
           "name": "To",
           "description": "End of range (exclusive)."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "reanudar_biberon": {
+    "resume_bottle": {
       "name": "Resume paused bottle",
       "description": "A paused bottle becomes the current bottle again.",
       "fields": {
@@ -692,21 +709,21 @@
           "name": "ID",
           "description": "Paused bottle."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "registrar_panal": {
+    "log_diaper": {
       "name": "Log diaper",
       "description": "Logs a diaper change (pee, poop or both).",
       "fields": {
-        "tipo": {
+        "type": {
           "name": "Type",
           "description": "Pee, poop or both."
         },
-        "fin": {
+        "ended_at": {
           "name": "Time",
           "description": "When it was changed (default now)."
         },
@@ -714,25 +731,25 @@
           "name": "Color",
           "description": "Poop only."
         },
-        "consistencia": {
+        "consistency": {
           "name": "Consistency",
           "description": "Poop only."
         },
-        "nota": {
+        "note": {
           "name": "Note",
           "description": "Free text."
         },
-        "fuente": {
+        "source": {
           "name": "Source",
           "description": "button, app, voice…"
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "corregir_panal": {
+    "correct_diaper": {
       "name": "Edit diaper",
       "description": "Edits a logged diaper.",
       "fields": {
@@ -740,11 +757,11 @@
           "name": "ID",
           "description": "Diaper ID."
         },
-        "tipo": {
+        "type": {
           "name": "Type",
           "description": "Pee, poop or both."
         },
-        "fin": {
+        "ended_at": {
           "name": "Time",
           "description": "When it was changed (default now)."
         },
@@ -752,21 +769,21 @@
           "name": "Color",
           "description": "Poop only."
         },
-        "consistencia": {
+        "consistency": {
           "name": "Consistency",
           "description": "Poop only."
         },
-        "nota": {
+        "note": {
           "name": "Note",
           "description": "Free text."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "borrar_panal": {
+    "delete_diaper": {
       "name": "Delete diaper",
       "description": "Deletes a logged diaper.",
       "fields": {
@@ -774,71 +791,71 @@
           "name": "ID",
           "description": "Diaper ID."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "listar_panales": {
+    "list_diapers": {
       "name": "List diapers",
       "description": "Returns diapers between two dates.",
       "fields": {
-        "desde": {
+        "since": {
           "name": "From",
           "description": "Start."
         },
-        "hasta": {
+        "until": {
           "name": "To",
           "description": "End (exclusive)."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "marcar_hito": {
+    "mark_milestone": {
       "name": "Mark milestone",
       "description": "Marks a developmental milestone as observed.",
       "fields": {
-        "hito_id": {
+        "milestone_id": {
           "name": "Milestone",
           "description": "Milestone ID in the catalog."
         },
-        "fecha": {
+        "date": {
           "name": "Date",
           "description": "Day you noticed it (default: today)."
         },
-        "nota": {
+        "note": {
           "name": "Note",
           "description": "Optional comment."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "desmarcar_hito": {
+    "unmark_milestone": {
       "name": "Unmark milestone",
       "description": "Removes the mark from a developmental milestone.",
       "fields": {
-        "hito_id": {
+        "milestone_id": {
           "name": "Milestone",
           "description": "Milestone ID in the catalog."
         },
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
       }
     },
-    "listar_hitos": {
+    "list_milestones": {
       "name": "List milestones",
       "description": "Returns the marked developmental milestones.",
       "fields": {
-        "bebe": {
+        "baby": {
           "name": "Baby",
           "description": "Only if you have several babies: which one it applies to (default: the only one)."
         }
@@ -851,94 +868,94 @@
       "init": {
         "title": "Baby details",
         "data": {
-          "nombre": "Name",
-          "fecha_nacimiento": "Date of birth",
-          "sexo": "Sex (for growth charts)",
-          "color_popo_default": "Usual poop color (preselected)",
-          "consistencia_popo_default": "Usual poop consistency (preselected)",
-          "unidad": "Unit"
+          "name": "Name",
+          "birth_date": "Date of birth",
+          "sex": "Sex (for growth charts)",
+          "poop_color_default": "Usual poop color (preselected)",
+          "poop_consistency_default": "Usual poop consistency (preselected)",
+          "unit": "Unit"
         },
         "description": "Change the usual poop when feeding or age changes."
       }
     }
   },
   "exceptions": {
-    "fecha_futura": {
-      "message": "{campo} is in the future: {valor}"
+    "future_date": {
+      "message": "{field} is in the future: {value}"
     },
-    "no_cargada": {
+    "not_loaded": {
       "message": "Baby Tracker is not loaded"
     },
-    "varios_bebes": {
-      "message": "There are several babies: specify which one in the 'bebe' field ({bebes})"
+    "several_babies": {
+      "message": "There are several babies: specify which one in the 'baby' field ({babies})"
     },
-    "bebe_no_encontrado": {
-      "message": "Baby not found: {bebe}"
+    "baby_not_found": {
+      "message": "Baby not found: {baby}"
     },
-    "falta_cantidad": {
-      "message": "Provide oz_tomadas, or oz_sobrantes (0 = finished what was left)"
+    "missing_amount": {
+      "message": "Provide oz_taken, or oz_leftover (0 = finished what was left)"
     },
-    "sin_tomas": {
+    "no_feedings": {
       "message": "There are no feedings logged"
     },
-    "toma_no_existe": {
+    "feeding_not_found": {
       "message": "Feeding {id} does not exist"
     },
-    "falta_id_restaurar": {
+    "missing_id_restore": {
       "message": "Provide the 'id' of the feeding to restore"
     },
-    "toma_no_borrada": {
+    "feeding_not_deleted": {
       "message": "Feeding {id} is not deleted"
     },
-    "extraccion_no_existe": {
+    "pumping_not_found": {
       "message": "Pumping session {id} does not exist"
     },
-    "panal_no_existe": {
+    "diaper_not_found": {
       "message": "Diaper {id} does not exist"
     },
-    "falta_medida": {
-      "message": "Provide at least peso_kg, talla_cm or perimetro_cm"
+    "missing_measurement": {
+      "message": "Provide at least weight_lb, height_in or head_in"
     },
-    "medida_no_existe": {
+    "measurement_not_found": {
       "message": "Measurement {id} does not exist"
     },
-    "biberon_no_abierto": {
+    "bottle_not_open": {
       "message": "Bottle {id} is not open"
     },
-    "sin_biberon_abierto": {
+    "no_open_bottle": {
       "message": "There is no open bottle"
     },
-    "biberon_no_existe": {
+    "bottle_not_found": {
       "message": "Bottle {id} does not exist"
     },
-    "biberon_con_tomas": {
+    "bottle_has_feedings": {
       "message": "The bottle already has feedings; delete them first"
     },
-    "sin_reserva": {
+    "no_stash": {
       "message": "There is no breast milk in the stash"
     },
-    "no_en_reserva": {
+    "not_in_stash": {
       "message": "Bottle {id} is not in the stash"
     },
-    "falta_lado": {
+    "missing_side": {
       "message": "Provide the amount for at least one side"
     },
-    "falta_cuanto": {
+    "missing_how_much": {
       "message": "Provide how much was taken"
     },
-    "cantidad_positiva": {
+    "positive_amount": {
       "message": "The amount taken must be greater than 0"
     },
-    "sin_biberon_anterior": {
+    "no_previous_bottle": {
       "message": "There is no previous bottle"
     },
-    "anterior_sin_espacio": {
-      "message": "The previous bottle only has {libre} oz free; adjust its size or the feeding amount"
+    "previous_no_room": {
+      "message": "The previous bottle only has {free} oz free; adjust its size or the feeding amount"
     },
-    "destino_invalido": {
-      "message": "The destination must be 'nuevo' or 'anterior'"
+    "invalid_target": {
+      "message": "The destination must be 'new' or 'previous'"
     },
-    "hito_no_existe": {
+    "milestone_not_found": {
       "message": "That milestone is not in the catalog: {id}"
     }
   }

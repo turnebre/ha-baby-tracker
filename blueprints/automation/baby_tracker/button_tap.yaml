@@ -1,0 +1,111 @@
+blueprint:
+  name: "Baby Tracker – button press adds to the bottle"
+  description: >-
+    Each press adds an amount to the current bottle (always a continuation). Presses closer together than
+    the window count as a single feeding. If a press goes past the bottle size, the rest starts a new bottle.
+    Sends a notification when a new bottle starts and a single summary after the last press.
+
+    Pair it with "Baby Tracker – notification buttons" so Undo / Edit buttons work.
+  domain: automation
+  source_url: https://github.com/turnebre/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/button_tap.yaml
+  input:
+    disparador:
+      name: Press trigger
+      description: "The trigger for one press of your button (e.g. a ZHA or Zigbee2MQTT button event)."
+      selector:
+        trigger: {}
+    baby:
+      name: Baby
+      description: Only needed if you track more than one baby.
+      default: ""
+      selector:
+        config_entry:
+          integration: baby_tracker
+    amount:
+      name: Amount per press (oz)
+      default: 0.5
+      selector:
+        number: {min: 0.25, max: 2, step: 0.25, unit_of_measurement: oz}
+    window:
+      name: Window between presses (seconds)
+      description: Presses within this time are one feeding; the summary is sent this long after the last press.
+      default: 60
+      selector:
+        number: {min: 10, max: 300, unit_of_measurement: s}
+    phones:
+      name: Phones to notify
+      default: []
+      selector:
+        device:
+          integration: mobile_app
+          multiple: true
+
+mode: restart
+max_exceeded: silent
+
+triggers: !input disparador
+
+variables:
+  baby: !input baby
+  window: !input window
+  phones: !input phones
+  services: >-
+    {{ phones | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
+
+actions:
+  - action: baby_tracker.log_feeding
+    data:
+      oz_taken: !input amount
+      source: button
+      accumulate_seconds: !input window
+      baby: "{{ baby }}"
+    response_variable: r
+  - variables:
+      u: "{{ r.unit }}"
+      b: "{{ r.bottle }}"
+      suffix: "{{ '__' ~ r.baby }}"
+  # New bottle: immediate notice
+  - if: "{{ r.new_bottle }}"
+    then:
+      - repeat:
+          for_each: "{{ services }}"
+          sequence:
+            - action: "{{ repeat.item }}"
+              continue_on_error: true
+              data:
+                title: >-
+                  {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+                  🍼 {{ 'New bottle' }} · {{ r.name }} ({{ c(b.oz) }})
+                message: >-
+                  {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+                  {% set a = r.previous if r.previous is mapping else {} %}
+                  {{ 'Started at' }} {{ as_timestamp(b.prepared_at) | timestamp_custom('%H:%M') }}.
+                  {%- if a %} {{ 'Previous' }}: {{ c(a.consumed) }} / {{ c(a.oz) }}{% endif %}
+                data:
+                  tag: "baby_bottle_{{ r.baby }}"
+  # Summary once the window passes with no more taps (a new tap restarts the automation)
+  - delay:
+      seconds: "{{ window | int }}"
+  - repeat:
+      for_each: "{{ services }}"
+      sequence:
+        - action: "{{ repeat.item }}"
+          continue_on_error: true
+          data:
+            title: "🍼 {{ r.name }}"
+            message: >-
+              {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+              {{ 'Drank' }} {{ c(r.oz_taken) }} {{ 'at' }} {{ as_timestamp(r.ended_at) | timestamp_custom('%H:%M') }}.
+              {{ 'Bottle' }}: {{ c(b.consumed) }} / {{ c(b.oz) }}{{ (' · ' ~ 'left' ~ ' ' ~ c(b.remaining)) if b.remaining > 0 else ' ✅' }}
+            data:
+              tag: "baby_feeding_{{ r.baby }}"
+              actions:
+                - action: "BABY_UNDO_{{ r.id }}{{ suffix }}"
+                  title: "{{ 'Undo' }}"
+                - action: "BABY_CORRECT_{{ r.id }}_{{ u }}{{ suffix }}"
+                  title: "{{ 'Edit amount…' }}"
+                  behavior: textInput
+                  textInputButtonTitle: "{{ 'Save' }}"
+                  textInputPlaceholder: "{{ u }}"
+                - action: "BABY_MOVENEW_{{ r.id }}{{ suffix }}"
+                  title: "{{ 'It was a new bottle' }}"

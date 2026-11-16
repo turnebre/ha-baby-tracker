@@ -1,0 +1,248 @@
+blueprint:
+  name: "Baby Tracker – notification buttons"
+  description: >-
+    Handles the buttons in Baby Tracker notifications: Undo, Restore, Edit amount, It was a new bottle,
+    Undo new bottle, Discard bottle, reminder answers ("finished what was left" / details by text) and
+    breast milk stash actions. Create ONE automation from this blueprint; it serves all babies.
+  domain: automation
+  source_url: https://github.com/turnebre/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/actions.yaml
+  input:
+    phones:
+      name: Phones to notify (confirmations)
+      default: []
+      selector:
+        device:
+          integration: mobile_app
+          multiple: true
+
+mode: queued
+max: 20
+
+triggers:
+  - trigger: event
+    event_type: mobile_app_notification_action
+
+conditions:
+  - condition: template
+    value_template: "{{ trigger.event.data.action is string and trigger.event.data.action.startswith('BABY_') }}"
+
+variables:
+  phones: !input phones
+  services: >-
+    {{ phones | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
+  # BABY_<ACTION>_<id>[_<extra>]__<baby>
+  base: "{{ trigger.event.data.action.split('__')[0] }}"
+  baby: "{{ trigger.event.data.action.split('__')[1] if '__' in trigger.event.data.action else '' }}"
+  action: "{{ base.split('_')[1] }}"
+  oid: "{{ (base.split('_')[2] if base.split('_') | count > 2 else 0) | int(0) }}"
+  extra: "{{ base.split('_')[3] if base.split('_') | count > 3 else '' }}"
+  text: "{{ trigger.event.data.reply_text | default('', true) }}"
+
+actions:
+  - choose:
+      - conditions: "{{ action == 'UNDO' }}"
+        sequence:
+          - action: baby_tracker.delete_feeding
+            data: {id: "{{ oid }}", baby: "{{ baby }}"}
+            response_variable: r
+          - repeat:
+              for_each: "{{ services }}"
+              sequence:
+                - action: "{{ repeat.item }}"
+                  continue_on_error: true
+                  data:
+                    title: "↩️ {{ 'Feeding deleted' }}"
+                    message: "{{ r.name }} · {{ as_timestamp(r.ended_at) | timestamp_custom('%H:%M') }}"
+                    data:
+                      tag: "baby_feeding_{{ r.baby }}"
+                      actions:
+                        - action: "BABY_RESTORE_{{ oid }}__{{ r.baby }}"
+                          title: "{{ 'Restore' }}"
+      - conditions: "{{ action == 'RESTORE' }}"
+        sequence:
+          - action: baby_tracker.restore_feeding
+            data: {id: "{{ oid }}", baby: "{{ baby }}"}
+      - conditions: "{{ action == 'CORRECT' and (text | replace(',', '.') | regex_findall('\\d+(?:\\.\\d+)?') | count > 0) }}"
+        sequence:
+          - variables:
+              v: "{{ (text | replace(',', '.') | regex_findall('\\d+(?:\\.\\d+)?'))[0] | float }}"
+              oz: "{{ (v / 29.5735) | round(2) if extra == 'ml' else v }}"
+          - action: baby_tracker.correct_feeding
+            data: {id: "{{ oid }}", oz_taken: "{{ oz }}", confidence: exact, baby: "{{ baby }}"}
+            response_variable: r
+          - variables:
+              u: "{{ r.unit }}"
+              title_ok: "{{ 'Edited:' }}"
+          - repeat:
+              for_each: "{{ services }}"
+              sequence:
+                - action: "{{ repeat.item }}"
+                  continue_on_error: true
+                  data:
+                    title: "🍼 {{ r.name }}"
+                    message: >-
+                      {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+                      {% set b = r.bottle if r.bottle is mapping else {} %}
+                      {{ title_ok }} {{ c(r.oz_taken) }} · {{ as_timestamp(r.ended_at) | timestamp_custom('%H:%M') }}.
+                      {%- if b %} {{ 'Bottle' }}: {{ c(b.consumed) }} / {{ c(b.oz) }}{% endif %}
+                    data:
+                      tag: "baby_feeding_{{ r.baby }}"
+                      actions:
+                        - action: "BABY_UNDO_{{ r.id }}__{{ r.baby }}"
+                          title: "{{ 'Undo' }}"
+                        - action: "BABY_CORRECT_{{ r.id }}_{{ r.unit }}__{{ r.baby }}"
+                          title: "{{ 'Edit amount…' }}"
+                          behavior: textInput
+                          textInputButtonTitle: "{{ 'Save' }}"
+                          textInputPlaceholder: "{{ r.unit }}"
+      - conditions: "{{ action == 'MOVENEW' }}"
+        sequence:
+          - action: baby_tracker.correct_feeding
+            data: {id: "{{ oid }}", move: new, baby: "{{ baby }}"}
+            response_variable: r
+          - variables:
+              u: "{{ r.unit }}"
+              title_ok: "{{ 'In a new bottle:' }}"
+          - repeat:
+              for_each: "{{ services }}"
+              sequence:
+                - action: "{{ repeat.item }}"
+                  continue_on_error: true
+                  data:
+                    title: "🍼 {{ r.name }}"
+                    message: >-
+                      {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+                      {% set b = r.bottle if r.bottle is mapping else {} %}
+                      {{ title_ok }} {{ c(r.oz_taken) }} · {{ as_timestamp(r.ended_at) | timestamp_custom('%H:%M') }}.
+                      {%- if b %} {{ 'Bottle' }}: {{ c(b.consumed) }} / {{ c(b.oz) }}{% endif %}
+                    data:
+                      tag: "baby_feeding_{{ r.baby }}"
+                      actions:
+                        - action: "BABY_UNDO_{{ r.id }}__{{ r.baby }}"
+                          title: "{{ 'Undo' }}"
+                        - action: "BABY_CORRECT_{{ r.id }}_{{ r.unit }}__{{ r.baby }}"
+                          title: "{{ 'Edit amount…' }}"
+                          behavior: textInput
+                          textInputButtonTitle: "{{ 'Save' }}"
+                          textInputPlaceholder: "{{ r.unit }}"
+      - conditions: "{{ action == 'UNDOBOTTLE' }}"
+        sequence:
+          - action: baby_tracker.delete_bottle
+            data: {id: "{{ oid }}", baby: "{{ baby }}"}
+      - conditions: "{{ action == 'TOSS' }}"
+        sequence:
+          - action: baby_tracker.close_bottle
+            data: {id: "{{ oid }}", baby: "{{ baby }}"}
+      # Reminder answers
+      - conditions: "{{ action == 'ATE' }}"
+        sequence:
+          - action: baby_tracker.log_feeding
+            data: {oz_leftover: 0, source: notification, baby: "{{ baby }}"}
+            response_variable: r
+          - variables:
+              u: "{{ r.unit }}"
+              title_ok: "{{ 'Drank' }}"
+          - repeat:
+              for_each: "{{ services }}"
+              sequence:
+                - action: "{{ repeat.item }}"
+                  continue_on_error: true
+                  data:
+                    title: "🍼 {{ r.name }}"
+                    message: >-
+                      {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+                      {% set b = r.bottle if r.bottle is mapping else {} %}
+                      {{ title_ok }} {{ c(r.oz_taken) }} · {{ as_timestamp(r.ended_at) | timestamp_custom('%H:%M') }}.
+                      {%- if b %} {{ 'Bottle' }}: {{ c(b.consumed) }} / {{ c(b.oz) }}{% endif %}
+                    data:
+                      tag: "baby_feeding_{{ r.baby }}"
+                      actions:
+                        - action: "BABY_UNDO_{{ r.id }}__{{ r.baby }}"
+                          title: "{{ 'Undo' }}"
+                        - action: "BABY_CORRECT_{{ r.id }}_{{ r.unit }}__{{ r.baby }}"
+                          title: "{{ 'Edit amount…' }}"
+                          behavior: textInput
+                          textInputButtonTitle: "{{ 'Save' }}"
+                          textInputPlaceholder: "{{ r.unit }}"
+      - conditions: "{{ action == 'DETAILS' }}"
+        sequence:
+          - variables:
+              p: >-
+                {%- set t = (trigger.event.data.reply_text or '') | lower | replace(',', '.') | trim -%}
+                {%- set n = namespace(ended_at=none, oz=none) -%}
+                {%- set is_new = 'new' in t or 'another' in t -%}
+                {%- set hm = t | regex_findall('(\\d{1,2})[:.h](\\d{2})\\s*(am|pm|a\\.m\\.|p\\.m\\.)?') -%}
+                {%- set ago = t | regex_findall('(\\d+(?:\\.\\d+)?)\\s*(h|hr|hours?|m|min|minutes?)\\s*ago') -%}
+                {%- if hm -%}
+                  {%- set h = hm[0][0] | int -%}{%- set mi = hm[0][1] | int -%}{%- set ap = hm[0][2] | replace('.', '') -%}
+                  {%- if ap == 'pm' and h < 12 -%}{%- set h = h + 12 -%}{%- elif ap == 'am' and h == 12 -%}{%- set h = 0 -%}{%- endif -%}
+                  {%- if h <= 23 and mi <= 59 -%}
+                    {%- set base = now().replace(hour=h, minute=mi, second=0, microsecond=0) -%}
+                    {%- set hours = [0] if (ap or h == 0 or h > 12) else [0, 12] -%}
+                    {%- for extra in hours -%}{%- for day in [0, 1] -%}
+                      {%- set c = base + timedelta(hours=extra) - timedelta(days=day) -%}
+                      {%- if c <= now() and (n.ended_at is none or c > n.ended_at) -%}{%- set n.ended_at = c -%}{%- endif -%}
+                    {%- endfor -%}{%- endfor -%}
+                  {%- endif -%}
+                  {%- set rest = t | regex_replace('(\\d{1,2})[:.h](\\d{2})\\s*(am|pm|a\\.m\\.|p\\.m\\.)?', '') -%}
+                {%- elif ago -%}
+                  {%- set v = ago[0][0] | float -%}
+                  {%- set min = v * 60 if ago[0][1] in ['h', 'hr', 'hour', 'hours'] else v -%}
+                  {%- set n.ended_at = now() - timedelta(minutes=min) -%}
+                  {%- set rest = t | regex_replace('(\\d+(?:\\.\\d+)?)\\s*[a-z]*\\s*ago', '') -%}
+                {%- else -%}{%- set rest = t -%}{%- endif -%}
+                {%- set nums = rest | regex_findall('(\\d+(?:\\.\\d+)?)') -%}
+                {%- if nums and 0 < (nums[0] | float) <= (360 if extra == 'ml' else 12) -%}{%- set n.oz = nums[0] | float -%}{%- endif -%}
+                {%- if n.ended_at is none and not hm and not ago and n.oz is not none -%}{%- set n.ended_at = now() -%}{%- endif -%}
+                {%- if n.ended_at is not none and n.ended_at < now() - timedelta(hours=12) -%}{%- set n.ended_at = none -%}{%- endif -%}
+                {{ {'ended_at': n.ended_at.isoformat() if n.ended_at is not none else none, 'oz': n.oz, 'new': is_new} }}
+          - choose:
+              - conditions: "{{ p.ended_at is not none }}"
+                sequence:
+                  - action: baby_tracker.log_feeding
+                    response_variable: r
+                    data: >-
+                      {{ {'ended_at': p.ended_at, 'source': 'notification', 'new_bottle': p.new, 'baby': baby, 'note': text}
+                         | combine({'oz_taken': ((p.oz / 29.5735) | round(2) if extra == 'ml' else p.oz)} if p.oz is not none else {'oz_leftover': 0}) }}
+                  - variables:
+                      u: "{{ r.unit }}"
+                      title_ok: "{{ 'Drank' }}"
+                  - repeat:
+                      for_each: "{{ services }}"
+                      sequence:
+                        - action: "{{ repeat.item }}"
+                          continue_on_error: true
+                          data:
+                            title: "🍼 {{ r.name }}"
+                            message: >-
+                              {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+                              {% set b = r.bottle if r.bottle is mapping else {} %}
+                              {{ title_ok }} {{ c(r.oz_taken) }} · {{ as_timestamp(r.ended_at) | timestamp_custom('%H:%M') }}.
+                              {%- if b %} {{ 'Bottle' }}: {{ c(b.consumed) }} / {{ c(b.oz) }}{% endif %}
+                            data:
+                              tag: "baby_feeding_{{ r.baby }}"
+                              actions:
+                                - action: "BABY_UNDO_{{ r.id }}__{{ r.baby }}"
+                                  title: "{{ 'Undo' }}"
+                                - action: "BABY_CORRECT_{{ r.id }}_{{ r.unit }}__{{ r.baby }}"
+                                  title: "{{ 'Edit amount…' }}"
+                                  behavior: textInput
+                                  textInputButtonTitle: "{{ 'Save' }}"
+                                  textInputPlaceholder: "{{ r.unit }}"
+              - conditions: "{{ p.new }}"
+                sequence:
+                  - action: baby_tracker.new_bottle
+                    data: {baby: "{{ baby }}"}
+      # Breast milk stash
+      - conditions: "{{ action == 'USESTASH' }}"
+        sequence:
+          - action: baby_tracker.use_stash
+            data: {id: "{{ oid }}", baby: "{{ baby }}"}
+      - conditions: "{{ action == 'FRIDGE' }}"
+        sequence:
+          - action: baby_tracker.move_stash
+            data: {id: "{{ oid }}", location: fridge, baby: "{{ baby }}"}
+      - conditions: "{{ action == 'DISCARD' }}"
+        sequence:
+          - action: baby_tracker.discard_stash
+            data: {id: "{{ oid }}", baby: "{{ baby }}"}

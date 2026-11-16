@@ -1,0 +1,81 @@
+blueprint:
+  name: "Baby Tracker – breast milk about to expire"
+  description: >-
+    Before the soonest breast milk stash bottle expires, sends a notification with "Use now",
+    "Move to fridge" (if at room temperature) and "Discard". Requires "Baby Tracker – notification buttons".
+  domain: automation
+  source_url: https://github.com/turnebre/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/milk_expiring.yaml
+  input:
+    stash:
+      name: "Breast milk stash sensor"
+      description: "The baby's \"Breast milk stash\" sensor."
+      selector:
+        entity:
+          filter:
+            - integration: baby_tracker
+              domain: sensor
+    expires_at:
+      name: "Stash next expiry sensor"
+      selector:
+        entity:
+          filter:
+            - integration: baby_tracker
+              domain: sensor
+              device_class: timestamp
+    lead:
+      name: "How long before (negative offset)"
+      description: "Format -HH:MM:SS, e.g. -01:00:00 for one hour before."
+      default: "-01:00:00"
+      selector:
+        text: {}
+    phones:
+      name: Phones to notify
+      default: []
+      selector:
+        device:
+          integration: mobile_app
+          multiple: true
+
+mode: single
+
+triggers:
+  - trigger: time
+    at:
+      entity_id: !input expires_at
+      offset: !input lead
+
+variables:
+  stash: !input stash
+  phones: !input phones
+  services: >-
+    {{ phones | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
+  baby: "{{ state_attr(stash, 'baby_id') or '' }}"
+  u: "{{ state_attr(stash, 'unit') or 'oz' }}"
+  b: >-
+    {{ (state_attr(stash, 'bottles') or []) | selectattr('expired', 'false') | selectattr('expires_at')
+       | sort(attribute='expires_at') | first | default({}) }}
+
+conditions:
+  - condition: template
+    value_template: "{{ b != {} }}"
+
+actions:
+  - repeat:
+      for_each: "{{ services }}"
+      sequence:
+        - action: "{{ repeat.item }}"
+          continue_on_error: true
+          data:
+            title: "🍼 {{ 'Breast milk about to expire' }}"
+            message: >-
+              {%- macro c(v) -%}{{ ((v|float(0))*29.5735)|round(0)|int ~ ' ml' if u == 'ml' else ('%g' % (v|float(0))) ~ ' oz' }}{%- endmacro -%}
+              {{ c(b.oz) }} ({{ 'fridge' if b.location == 'fridge' else 'room temperature' }})
+              · {{ 'expires at' }} {{ as_timestamp(b.expires_at) | timestamp_custom('%H:%M') }}
+            data:
+              tag: "baby_stash_{{ b.id }}"
+              push:
+                interruption-level: time-sensitive
+              actions: >-
+                {{ [{'action': 'BABY_USESTASH_' ~ b.id ~ '__' ~ baby, 'title': 'Use now'}]
+                   + ([{'action': 'BABY_FRIDGE_' ~ b.id ~ '__' ~ baby, 'title': 'Move to fridge'}] if b.location == 'room' else [])
+                   + [{'action': 'BABY_DISCARD_' ~ b.id ~ '__' ~ baby, 'title': 'Discard'}] }}

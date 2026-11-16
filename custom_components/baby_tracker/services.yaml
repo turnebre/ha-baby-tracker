@@ -1,475 +1,475 @@
-registrar_toma:
+log_feeding:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
-    oz_tomadas:
+          integration: baby_tracker
+    oz_taken:
       selector:
         number: {min: 0.25, max: 12, step: 0.25, unit_of_measurement: oz}
-    oz_sobrantes:
+    oz_leftover:
       selector:
         number: {min: 0, max: 12, step: 0.25, unit_of_measurement: oz}
-    nuevo_biberon:
+    new_bottle:
       selector:
         boolean:
-    fin:
+    ended_at:
       selector:
         datetime:
-    acumular_segundos:
+    accumulate_seconds:
       selector:
         number: {min: 0, max: 600, unit_of_measurement: s, mode: box}
-    tipo:
+    type:
       selector:
-        select: {translation_key: tipo, options: [formula, materna, mixta]}
-    reserva_id:
+        select: {translation_key: type, options: [formula, breast_milk, mixed]}
+    stash_id:
       selector:
         number: {min: 1, max: 1000000, mode: box}
-    pausar_actual:
+    pause_current:
       selector:
         boolean:
-    confianza:
+    confidence:
       selector:
-        select: {translation_key: confianza, options: [exacto, estimado, inferido]}
-    fuente:
-      example: boton
+        select: {translation_key: confidence, options: [exact, estimated, inferred]}
+    source:
+      example: button
       selector:
         text:
-    nota:
+    note:
       selector:
         text:
 
-corregir_toma:
+correct_feeding:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       selector:
         number: {min: 1, max: 1000000, mode: box}
-    fin:
+    ended_at:
       selector:
         datetime:
-    oz_tomadas:
+    oz_taken:
       selector:
         number: {min: 0.25, max: 12, step: 0.25, unit_of_measurement: oz}
-    tipo:
+    type:
       selector:
-        select: {translation_key: tipo, options: [formula, materna, mixta]}
-    confianza:
+        select: {translation_key: type, options: [formula, breast_milk, mixed]}
+    confidence:
       selector:
-        select: {translation_key: confianza, options: [exacto, estimado, inferido]}
-    nota:
+        select: {translation_key: confidence, options: [exact, estimated, inferred]}
+    note:
       selector:
         text:
-    mover:
+    move:
       selector:
-        select: {translation_key: mover, options: [nuevo, anterior]}
+        select: {translation_key: move, options: [new, previous]}
 
-borrar_toma:
+delete_feeding:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
-restaurar_toma:
+restore_feeding:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       required: true
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
-nuevo_biberon:
+new_bottle:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     oz:
       selector:
         number: {min: 0.5, max: 12, step: 0.5, unit_of_measurement: oz}
-    tipo:
+    type:
       selector:
-        select: {translation_key: tipo, options: [formula, materna, mixta]}
+        select: {translation_key: type, options: [formula, breast_milk, mixed]}
 
-cerrar_biberon:
+close_bottle:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
-borrar_biberon:
+delete_bottle:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
-    id:
-      required: true
-      selector:
-        number: {min: 1, max: 1000000, mode: box}
-
-corregir_biberon:
-  fields:
-    bebe:
-      selector:
-        config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       required: true
       selector:
         number: {min: 1, max: 1000000, mode: box}
-    hecho:
+
+correct_bottle:
+  fields:
+    baby:
+      selector:
+        config_entry:
+          integration: baby_tracker
+    id:
+      required: true
+      selector:
+        number: {min: 1, max: 1000000, mode: box}
+    made_at:
       selector:
         datetime:
-    ubicacion:
+    location:
       selector:
-        select: {translation_key: ubicacion, options: [refrigerador, ambiente]}
+        select: {translation_key: location, options: [fridge, room]}
     oz:
       selector:
         number: {min: 0.5, max: 12, step: 0.5, unit_of_measurement: oz}
-    tipo:
+    type:
       selector:
-        select: {translation_key: tipo, options: [formula, materna, mixta]}
-    nota:
+        select: {translation_key: type, options: [formula, breast_milk, mixed]}
+    note:
       selector:
         text:
-    reabrir:
+    reopen:
       selector:
         boolean:
-    reserva_id:
+    stash_id:
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
-registrar_medida:
+log_measurement:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
-    fecha:
+          integration: baby_tracker
+    date:
       selector:
         datetime:
-    peso_kg:
+    weight_lb:
       selector:
-        number: {min: 0.5, max: 30, step: 0.01, unit_of_measurement: kg, mode: box}
-    talla_cm:
+        number: {min: 1, max: 66, step: 0.01, unit_of_measurement: lb, mode: box}
+    height_in:
       selector:
-        number: {min: 20, max: 130, step: 0.1, unit_of_measurement: cm, mode: box}
-    perimetro_cm:
+        number: {min: 8, max: 51, step: 0.1, unit_of_measurement: in, mode: box}
+    head_in:
       selector:
-        number: {min: 20, max: 60, step: 0.1, unit_of_measurement: cm, mode: box}
-    nota:
+        number: {min: 8, max: 24, step: 0.1, unit_of_measurement: in, mode: box}
+    note:
       selector:
         text:
 
-borrar_medida:
+delete_measurement:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       required: true
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
-listar_tomas:
+list_feedings:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
-    desde:
+          integration: baby_tracker
+    since:
       required: true
       selector:
         datetime:
-    hasta:
+    until:
       required: true
       selector:
         datetime:
-    borradas:
+    deleted:
       selector:
         boolean:
 
-listar_biberones:
+list_bottles:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
-    desde:
+          integration: baby_tracker
+    since:
       required: true
       selector:
         datetime:
-    hasta:
+    until:
       required: true
       selector:
         datetime:
 
-listar_medidas:
+list_measurements:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
 
-guardar_leche:
+save_milk:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     oz:
       required: true
       selector:
         number: {min: 0.25, max: 12, step: 0.25, unit_of_measurement: oz}
-    hecho:
+    made_at:
       selector:
         datetime:
-    ubicacion:
+    location:
       selector:
-        select: {translation_key: ubicacion, options: [refrigerador, ambiente]}
-    nota:
+        select: {translation_key: location, options: [fridge, room]}
+    note:
       selector:
         text:
 
-usar_reserva:
+use_stash:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       selector:
         number: {min: 1, max: 1000000, mode: box}
-    pausar_actual:
+    pause_current:
       selector:
         boolean:
 
-reanudar_biberon:
+resume_bottle:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       required: true
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
-mover_reserva:
+move_stash:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       required: true
       selector:
         number: {min: 1, max: 1000000, mode: box}
-    ubicacion:
+    location:
       required: true
       selector:
-        select: {translation_key: ubicacion, options: [refrigerador, ambiente]}
+        select: {translation_key: location, options: [fridge, room]}
 
-descartar_reserva:
+discard_stash:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       required: true
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
-registrar_extraccion:
+log_pumping:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
-    fin:
+          integration: baby_tracker
+    ended_at:
       selector:
         datetime:
-    oz_izq:
+    oz_left:
       selector:
         number: {min: 0, max: 12, step: 0.25, unit_of_measurement: oz}
-    oz_der:
+    oz_right:
       selector:
         number: {min: 0, max: 12, step: 0.25, unit_of_measurement: oz}
-    duracion_min:
+    duration_min:
       selector:
         number: {min: 0, max: 180, unit_of_measurement: min, mode: box}
-    guardar:
+    save:
       selector:
         boolean:
-    biberones:
+    bottles:
       selector:
         object:
-    ubicacion:
+    location:
       selector:
-        select: {translation_key: ubicacion, options: [refrigerador, ambiente]}
-    nota:
+        select: {translation_key: location, options: [fridge, room]}
+    note:
       selector:
         text:
 
-borrar_extraccion:
+delete_pumping:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       required: true
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
-listar_reservas:
+list_stashes:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
 
-listar_extracciones:
+list_pumpings:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
-    desde:
+          integration: baby_tracker
+    since:
       required: true
       selector:
         datetime:
-    hasta:
+    until:
       required: true
       selector:
         datetime:
 
-registrar_panal:
+log_diaper:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
-    tipo:
+          integration: baby_tracker
+    type:
       required: true
       selector:
-        select: {translation_key: tipo_panal, options: [pipi, popo, ambos]}
-    fin:
+        select: {translation_key: diaper_type, options: [pee, poop, both]}
+    ended_at:
       selector:
         datetime:
     color:
       selector:
-        select: {translation_key: color_popo, options: [amarillo, verde, cafe, naranja, negro, rojo, blanco, no_se]}
-    consistencia:
+        select: {translation_key: poop_color, options: [yellow, green, brown, orange, black, red, white, not_sure]}
+    consistency:
       selector:
-        select: {translation_key: consistencia_popo, options: [liquida, grumosa, pastosa, dura, no_se]}
-    nota:
+        select: {translation_key: poop_consistency, options: [watery, seedy, pasty, hard, not_sure]}
+    note:
       selector:
         text:
-    fuente:
+    source:
       selector:
         text:
 
-corregir_panal:
+correct_diaper:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       required: true
       selector:
         number: {min: 1, max: 1000000, mode: box}
-    tipo:
+    type:
       selector:
-        select: {translation_key: tipo_panal, options: [pipi, popo, ambos]}
-    fin:
+        select: {translation_key: diaper_type, options: [pee, poop, both]}
+    ended_at:
       selector:
         datetime:
     color:
       selector:
-        select: {translation_key: color_popo, options: [amarillo, verde, cafe, naranja, negro, rojo, blanco, no_se]}
-    consistencia:
+        select: {translation_key: poop_color, options: [yellow, green, brown, orange, black, red, white, not_sure]}
+    consistency:
       selector:
-        select: {translation_key: consistencia_popo, options: [liquida, grumosa, pastosa, dura, no_se]}
-    nota:
+        select: {translation_key: poop_consistency, options: [watery, seedy, pasty, hard, not_sure]}
+    note:
       selector:
         text:
 
-borrar_panal:
+delete_diaper:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker
     id:
       required: true
       selector:
         number: {min: 1, max: 1000000, mode: box}
 
-listar_panales:
+list_diapers:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
-    desde:
+          integration: baby_tracker
+    since:
       required: true
       selector:
         datetime:
-    hasta:
+    until:
       required: true
       selector:
         datetime:
 
-marcar_hito:
+mark_milestone:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
-    hito_id:
+          integration: baby_tracker
+    milestone_id:
       required: true
       selector:
         text:
-    fecha:
+    date:
       selector:
         date:
-    nota:
+    note:
       selector:
         text:
 
-desmarcar_hito:
+unmark_milestone:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
-    hito_id:
+          integration: baby_tracker
+    milestone_id:
       required: true
       selector:
         text:
 
-listar_hitos:
+list_milestones:
   fields:
-    bebe:
+    baby:
       selector:
         config_entry:
-          integration: bebe
+          integration: baby_tracker

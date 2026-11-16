@@ -1,4 +1,4 @@
-"""Valores ajustables desde la UI: oz por biberón e indicación del pediatra."""
+"""Values adjustable from the UI: oz per bottle and the pediatrician's guidance."""
 
 from __future__ import annotations
 
@@ -18,45 +18,45 @@ from .entity import device_info
 
 
 @dataclass(frozen=True, kw_only=True)
-class BebeNumberDescription(NumberEntityDescription):
-    # Atributo de BebeRuntime que refleja este valor
-    campo: str
+class BabyNumberDescription(NumberEntityDescription):
+    # BabyRuntime attribute that mirrors this value
+    field: str
 
 
-NUMEROS: tuple[BebeNumberDescription, ...] = (
-    BebeNumberDescription(
-        key="oz_por_biberon", translation_key="oz_por_biberon", campo="oz_default",
+NUMBERS: tuple[BabyNumberDescription, ...] = (
+    BabyNumberDescription(
+        key="oz_per_bottle", translation_key="oz_per_bottle", field="oz_default",
         icon="mdi:baby-bottle-outline", native_min_value=0.5, native_max_value=10,
         native_step=0.5, native_unit_of_measurement="oz", mode=NumberMode.BOX,
     ),
-    BebeNumberDescription(
-        key="meta_oz_toma", translation_key="meta_oz_toma", campo="meta_oz_toma",
-        icon="mdi:target", native_min_value=0.5, native_max_value=10,
+    BabyNumberDescription(
+        key="daily_goal", translation_key="daily_goal", field="goal_oz_day",
+        icon="mdi:target", native_min_value=4, native_max_value=50,
         native_step=0.5, native_unit_of_measurement="oz", mode=NumberMode.BOX,
     ),
-    BebeNumberDescription(
-        key="intervalo_indicado", translation_key="intervalo_indicado",
-        campo="intervalo_indicado_h", icon="mdi:timer-cog-outline",
+    BabyNumberDescription(
+        key="prescribed_interval", translation_key="prescribed_interval",
+        field="prescribed_interval_h", icon="mdi:timer-cog-outline",
         native_min_value=1, native_max_value=6, native_step=0.5,
         native_unit_of_measurement=UnitOfTime.HOURS, mode=NumberMode.BOX,
     ),
-    BebeNumberDescription(
-        key="limite_biberon", translation_key="limite_biberon", campo="limite_biberon_h",
+    BabyNumberDescription(
+        key="bottle_limit", translation_key="bottle_limit", field="bottle_limit_h",
         icon="mdi:timer-alert-outline", native_min_value=0.5, native_max_value=4, native_step=0.25,
         native_unit_of_measurement=UnitOfTime.HOURS, mode=NumberMode.BOX,
     ),
-    BebeNumberDescription(
-        key="limite_materna", translation_key="limite_materna", campo="limite_materna_h",
+    BabyNumberDescription(
+        key="breast_milk_limit", translation_key="breast_milk_limit", field="breast_milk_limit_h",
         icon="mdi:mother-nurse", native_min_value=0.5, native_max_value=4, native_step=0.25,
         native_unit_of_measurement=UnitOfTime.HOURS, mode=NumberMode.BOX,
     ),
-    BebeNumberDescription(
-        key="caducidad_ambiente", translation_key="caducidad_ambiente", campo="caducidad_ambiente_h",
+    BabyNumberDescription(
+        key="room_expiry", translation_key="room_expiry", field="room_expiry_h",
         icon="mdi:thermometer", native_min_value=0.5, native_max_value=8, native_step=0.5,
         native_unit_of_measurement=UnitOfTime.HOURS, mode=NumberMode.BOX,
     ),
-    BebeNumberDescription(
-        key="caducidad_refri", translation_key="caducidad_refri", campo="caducidad_refri_dias",
+    BabyNumberDescription(
+        key="fridge_expiry", translation_key="fridge_expiry", field="fridge_expiry_days",
         icon="mdi:fridge-outline", native_min_value=0.5, native_max_value=8, native_step=0.5,
         native_unit_of_measurement=UnitOfTime.DAYS, mode=NumberMode.BOX,
     ),
@@ -66,28 +66,28 @@ NUMEROS: tuple[BebeNumberDescription, ...] = (
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    async_add_entities(BebeNumber(entry, desc) for desc in NUMEROS)
+    async_add_entities(BabyNumber(entry, desc) for desc in NUMBERS)
 
 
-class BebeNumber(RestoreNumber):
+class BabyNumber(RestoreNumber):
     _attr_has_entity_name = True
-    entity_description: BebeNumberDescription
+    entity_description: BabyNumberDescription
 
-    def __init__(self, entry: ConfigEntry, desc: BebeNumberDescription) -> None:
+    def __init__(self, entry: ConfigEntry, desc: BabyNumberDescription) -> None:
         self._entry = entry
         self.entity_description = desc
         self._attr_unique_id = f"{entry.entry_id}_{desc.key}"
         self._attr_device_info = device_info(entry)
-        self._attr_native_value = getattr(entry.runtime_data, desc.campo)
+        self._attr_native_value = getattr(entry.runtime_data, desc.field)
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        if (ultimo := await self.async_get_last_number_data()) and ultimo.native_value:
-            await self.async_set_native_value(ultimo.native_value)
+        if (last := await self.async_get_last_number_data()) and last.native_value:
+            await self.async_set_native_value(last.native_value)
 
     async def async_set_native_value(self, value: float) -> None:
         self._attr_native_value = value
-        setattr(self._entry.runtime_data, self.entity_description.campo, value)
+        setattr(self._entry.runtime_data, self.entity_description.field, value)
         self.async_write_ha_state()
-        # La meta y la próxima toma dependen de estos valores
+        # The goal and the next feeding depend on these values
         await self._entry.runtime_data.coordinator.async_refresh()
