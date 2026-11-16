@@ -95,8 +95,11 @@ SENSORS: tuple[BabySensorDescription, ...] = (
         native_unit_of_measurement="oz", suggested_display_precision=1,
         value=lambda d: d["goal_oz_day"],
         attributes=lambda d: {
-            "source": "pediatrician guidance (oz per feeding × feedings per day)",
+            "source": "pediatrician guidance (daily goal)",
             "feedings_per_day": d["feedings_goal"],
+            "planned_oz_feeding": d["planned_oz_feeding"],
+            "night_start": d["night_start"],
+            "night_end": d["night_end"],
             "reference_per_weight_oz_day": d["reference_weight_oz_day"],
         },
     ),
@@ -210,7 +213,8 @@ SENSORS: tuple[BabySensorDescription, ...] = (
         key="oz_per_hour", translation_key="oz_per_hour", icon="mdi:speedometer",
         native_unit_of_measurement="oz/h", state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2, value=lambda d: d["oz_per_hour"],
-        attributes=lambda d: {"goal_oz_hour": round(d["goal_oz_day"] / 24, 2) if d["goal_oz_day"] else None},
+        attributes=lambda d: {"goal_oz_hour": round(d["goal_oz_day"] / d["awake_hours"], 2)
+                              if d["goal_oz_day"] and d["awake_hours"] else None},
     ),
     BabySensorDescription(
         key="last_diaper", translation_key="last_diaper", icon="mdi:human-baby-changing-table",

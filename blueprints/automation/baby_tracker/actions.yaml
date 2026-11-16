@@ -5,7 +5,7 @@ blueprint:
     Undo new bottle, Discard bottle, reminder answers ("finished what was left" / details by text) and
     breast milk stash actions. Create ONE automation from this blueprint; it serves all babies.
   domain: automation
-  source_url: https://github.com/HertBox/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/actions.yaml
+  source_url: https://github.com/turnebre/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/actions.yaml
   input:
     phones:
       name: Phones to notify (confirmations)

@@ -6,7 +6,7 @@ blueprint:
     "20:15 1.5", "40 min ago", "new 2"). Repeats until a feeding is logged. Requires
     "Baby Tracker – notification buttons" to handle the answers.
   domain: automation
-  source_url: https://github.com/HertBox/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/reminder.yaml
+  source_url: https://github.com/turnebre/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/reminder.yaml
   input:
     next:
       name: "Next feeding sensor"

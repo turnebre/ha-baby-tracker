@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 import logging
 from statistics import median
 from typing import Any
@@ -38,8 +38,10 @@ class BabyRuntime:
     coordinator: BabyCoordinator
     oz_default: float
     type_default: str
-    goal_oz_feeding: float
+    goal_oz_day: float
     prescribed_interval_h: float
+    night_start: time
+    night_end: time
     bottle_limit_h: float
     breast_milk_limit_h: float
     room_expiry_h: float
@@ -69,6 +71,70 @@ def _achievement(oz: float, minimum: float, ideal: float) -> int:
     return 2 if oz >= ideal - 0.05 else 1 if oz >= minimum - 0.05 else 0
 
 
+# ---------- Overnight window: no feedings are expected between bedtime and wake-up ----------
+
+def _at(day: date, t: time) -> datetime:
+    return dt_util.start_of_local_day(day).replace(hour=t.hour, minute=t.minute)
+
+
+def _night_spans(rt: BabyRuntime, lo: datetime, hi: datetime) -> list[tuple[datetime, datetime]]:
+    """Night intervals overlapping [lo, hi], oldest first. Equal bedtime and wake-up means no night."""
+    if rt.night_start == rt.night_end:
+        return []
+    spans = []
+    for i in range(-1, (hi.date() - lo.date()).days + 1):
+        day = lo.date() + timedelta(days=i)
+        end_day = day if rt.night_end > rt.night_start else day + timedelta(days=1)
+        start, end = _at(day, rt.night_start), _at(end_day, rt.night_end)
+        if end > lo and start < hi:
+            spans.append((start, end))
+    return spans
+
+
+def _in_night(rt: BabyRuntime, when: datetime) -> datetime | None:
+    """Wake-up time if `when` falls inside the night, else None."""
+    for start, end in _night_spans(rt, when, when + timedelta(seconds=1)):
+        if start <= when < end:
+            return end
+    return None
+
+
+def _next_bedtime(rt: BabyRuntime, when: datetime) -> datetime | None:
+    starts = [s for s, _ in _night_spans(rt, when, when + timedelta(days=2)) if s > when]
+    return min(starts) if starts else None
+
+
+def _awake_seconds(rt: BabyRuntime, a: datetime, b: datetime) -> float:
+    """Seconds between a and b that are not night."""
+    total = b.timestamp() - a.timestamp()
+    for start, end in _night_spans(rt, a, b):
+        total -= max(0.0, min(end, b).timestamp() - max(start, a).timestamp())
+    return max(0.0, total)
+
+
+def _step(rt: BabyRuntime, when: datetime) -> datetime:
+    """Time of the feeding that follows one at `when`: interval later, a top-up right at bedtime if the
+    interval would cross it (and bedtime is at least half an interval away), and wake-up after that."""
+    interval = timedelta(hours=rt.prescribed_interval_h)
+    nxt = when + interval
+    if (wake := _in_night(rt, when)) is not None:  # a feeding in the middle of the night
+        return wake if nxt < wake else nxt
+    bedtime = _next_bedtime(rt, when)
+    if bedtime is not None and nxt >= bedtime:
+        return bedtime if bedtime - when >= interval / 2 else _in_night(rt, bedtime) or nxt
+    return nxt
+
+
+def _plan_slots(rt: BabyRuntime, start: datetime, end: datetime) -> list[datetime]:
+    """Planned feeding times in [start, end): every interval while awake, skipping the night."""
+    slots: list[datetime] = []
+    when = _in_night(rt, start) or start
+    while when < end and len(slots) < 200:
+        slots.append(when)
+        when = _step(rt, when)
+    return slots
+
+
 class BabyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Recalculates Kpis every 5 min and after every log."""
 
@@ -87,6 +153,7 @@ class BabyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         rt: BabyRuntime = self.entry.runtime_data
         now = dt_util.now()
         today = now.date()
+        today_start = dt_util.start_of_local_day(today)
         series_start = dt_util.start_of_local_day(today - timedelta(days=SERIES_DAYS - 1))
         feedings = self.db.feedings_since(dt_util.as_utc(series_start).isoformat())
         for t in feedings:
@@ -133,8 +200,8 @@ class BabyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         last = self.db.last_feeding()
         last_ended_at = _parse(last["ended_at"]) if last else None
-        # The next feeding follows the pediatrician's guidance, not the learned interval
-        next_feeding = last_ended_at + timedelta(hours=rt.prescribed_interval_h) if last_ended_at else None
+        # The next feeding follows the pediatrician's guidance, not the learned interval, and never falls overnight
+        next_feeding = _step(rt, last_ended_at) if last_ended_at else None
 
         # Last 7 days (168 h): oz per feeding and frequency
         hace7 = now - timedelta(days=7)
@@ -152,7 +219,6 @@ class BabyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             rt.limits,
         )
         cerrados7 = [b for b in b7 if b["state"] in ("finished", "incomplete")]
-        today_start = dt_util.start_of_local_day(today)
         bottles_today = sum(1 for b in b7 if b["state"] != "stash" and _parse(b["prepared_at"]) >= today_start)
         pct_finished = (
             round(sum(b["state"] == "finished" for b in cerrados7) / len(cerrados7) * 100)
@@ -195,10 +261,14 @@ class BabyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         weight = self.db.last_measurement("weight_kg")
         height = self.db.last_measurement("height_cm")
         weight_kg = weight["weight_kg"] if weight else None
-        feedings_goal = 24 / rt.prescribed_interval_h
-        goal = round(rt.goal_oz_feeding * feedings_goal, 1)
+        day_end = dt_util.start_of_local_day(today + timedelta(days=1))
+        # Planned daytime feedings and the amount each one needs to reach the daily goal
+        feedings_goal = len(_plan_slots(rt, today_start, day_end)) or 1
+        goal = round(rt.goal_oz_day, 1)
+        awake_s = _awake_seconds(rt, today_start, day_end)
         weight_reference = _per_weight(weight_kg) if weight_kg else None
-        reference = self._reference(rt, now, today, today_start, today_d["oz"], goal, next_feeding, series, first_day)
+        reference = self._reference(rt, now, today, today_start, today_d["oz"], goal, next_feeding, series, first_day,
+                                    feedings_goal)
 
         return {
             "reference": reference,
@@ -214,7 +284,11 @@ class BabyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "weight": weight,
             "height": height,
             "goal_oz_day": goal,
-            "feedings_goal": round(feedings_goal, 1),
+            "feedings_goal": feedings_goal,
+            "planned_oz_feeding": round(goal / feedings_goal, 2),
+            "awake_hours": round(awake_s / 3600, 1),
+            "night_start": rt.night_start.strftime("%H:%M"),
+            "night_end": rt.night_end.strftime("%H:%M"),
             "reference_weight_oz_day": weight_reference,
             "goal_progress": round(today_d["oz"] / goal * 100) if goal else None,
             "age_days": (today - self.birth).days,
@@ -250,7 +324,7 @@ class BabyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _reference(self, rt: BabyRuntime, now: datetime, today: date, today_start: datetime, oz_today: float,
                     pediatrician_goal: float, next_feeding: datetime | None, series: list[dict[str, Any]],
-                    first_day: date) -> dict[str, Any]:
+                    first_day: date, feedings_goal: int) -> dict[str, Any]:
         """How much the baby should have had by this time, based on two daily goals: the pediatrician's and
         the weight-based reference (each day using the weight current on that day). The smaller one is the
         minimum and the larger one the ideal, so they swap on their own when the weight-based goal exceeds the pediatrician's."""
@@ -272,14 +346,15 @@ class BabyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         minimum, ideal, source_minimum = metas(today)
         ended_at_today = dt_util.start_of_local_day(today + timedelta(days=1))
-        day = ended_at_today - today_start  # 23 or 25 h on days with a clock change
+        # Intake is expected only while awake: the curve is flat overnight and reaches the goal at bedtime
+        awake_day = _awake_seconds(rt, today_start, ended_at_today) or 1.0
 
         def expected(goal: float, when: datetime) -> float:
-            return round(goal * ((when - today_start) / day), 1)
+            return round(goal * min(1.0, _awake_seconds(rt, today_start, min(when, ended_at_today)) / awake_day), 1)
 
         expected_min, expected_ideal = expected(minimum, now), expected(ideal, now)
         # One-feeding margin: right before eating it is normal to be one feeding below the line
-        margin = rt.prescribed_interval_h / 24
+        margin = min(1.0, rt.prescribed_interval_h * 3600 / awake_day)
         if oz_today >= expected_ideal - ideal * margin:
             state = "ideal"
         elif oz_today >= expected_min - minimum * margin:
@@ -287,13 +362,10 @@ class BabyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         else:
             state = "behind"
 
-        # Feedings left today according to the prescribed interval, starting from the next feeding
-        when = max(next_feeding, now) if next_feeding else now
-        upcoming = []
-        while when < ended_at_today:
-            upcoming.append({"hhmm": when.isoformat(timespec="seconds"),
-                             "minimum": expected(minimum, when), "ideal": expected(ideal, when)})
-            when += timedelta(hours=rt.prescribed_interval_h)
+        # Feedings left today according to the prescribed interval, starting from the next feeding (none overnight)
+        slots = _plan_slots(rt, max(next_feeding, now) if next_feeding else now, ended_at_today)
+        upcoming = [{"hhmm": w.isoformat(timespec="seconds"),
+                     "minimum": expected(minimum, w), "ideal": expected(ideal, w)} for w in slots]
         n = len(upcoming)
 
         def per_feeding(goal: float) -> float | None:
@@ -313,7 +385,7 @@ class BabyCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "per_feeding_minimum": per_feeding(minimum),
             "per_feeding_ideal": per_feeding(ideal),
             # More than this per feeding is no longer "prepare a bit more": the goal is not chased by forcing
-            "feeding_cap": round(rt.goal_oz_feeding + 1, 2),
+            "feeding_cap": round(ideal / feedings_goal + 1, 2),
             "next": upcoming,
             "days_7d": [{"date": s["date"], "oz": s["oz"], "achievement": s["achievement"]} for s in dias7],
             "days_minimum_7d": sum(s["achievement"] >= 1 for s in dias7),

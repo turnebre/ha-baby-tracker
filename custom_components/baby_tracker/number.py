@@ -30,8 +30,8 @@ NUMBERS: tuple[BabyNumberDescription, ...] = (
         native_step=0.5, native_unit_of_measurement="oz", mode=NumberMode.BOX,
     ),
     BabyNumberDescription(
-        key="goal_oz_feeding", translation_key="goal_oz_feeding", field="goal_oz_feeding",
-        icon="mdi:target", native_min_value=0.5, native_max_value=10,
+        key="daily_goal", translation_key="daily_goal", field="goal_oz_day",
+        icon="mdi:target", native_min_value=4, native_max_value=50,
         native_step=0.5, native_unit_of_measurement="oz", mode=NumberMode.BOX,
     ),
     BabyNumberDescription(

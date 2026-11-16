@@ -4,7 +4,7 @@ blueprint:
     Before the soonest breast milk stash bottle expires, sends a notification with "Use now",
     "Move to fridge" (if at room temperature) and "Discard". Requires "Baby Tracker – notification buttons".
   domain: automation
-  source_url: https://github.com/HertBox/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/milk_expiring.yaml
+  source_url: https://github.com/turnebre/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/milk_expiring.yaml
   input:
     stash:
       name: "Breast milk stash sensor"

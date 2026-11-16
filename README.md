@@ -1,7 +1,7 @@
 # Baby Tracker for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
-[![Validate](https://github.com/HertBox/ha-baby-tracker/actions/workflows/validate.yml/badge.svg)](https://github.com/HertBox/ha-baby-tracker/actions/workflows/validate.yml)
+[![Validate](https://github.com/turnebre/ha-baby-tracker/actions/workflows/validate.yml/badge.svg)](https://github.com/turnebre/ha-baby-tracker/actions/workflows/validate.yml)
 
 Track your baby's **bottles (formula and breast milk), feedings, diapers, pumping and growth** right inside Home Assistant —
 with a dedicated panel, charts, reminders and one-tap logging from a Zigbee button, your phone or your voice assistant.
@@ -29,7 +29,7 @@ Everything is stored **locally** in your Home Assistant (SQLite). No cloud, no a
   left to reach each one, the expected amount at the next feedings, and which goals were met on each of the last 7 days.
 - **Charts** by day, week or month: amount per day (formula vs breast milk), feedings, amount per feeding, bottles,
   % finished, wasted formula, pumped milk, diapers, and *when* the baby eats / needs a change.
-- **Pediatrician's plan** — amount per feeding and interval; the daily goal and the reminder follow it.
+- **Pediatrician's plan** — a daily goal in oz, the daytime feeding interval and a bedtime/wake-up window. Nothing is expected overnight; the per-feeding amounts, the "expected by now" curve and the reminder follow it.
 - **Growth** — weight (lb), length (in) and head circumference (in) history.
 - **Milestones** — first year, week by week: CDC milestones grouped into skills, tick them when you notice them and see progress by skill and area. A guide, not a test or a deadline.
 - **Several babies** (twins!) — one entry per baby, a selector in the panel.
@@ -39,7 +39,7 @@ Everything is stored **locally** in your Home Assistant (SQLite). No cloud, no a
 ## Installation
 
 ### HACS (recommended)
-1. HACS → ⋮ → **Custom repositories** → `https://github.com/HertBox/ha-baby-tracker` · type **Integration**.
+1. HACS → ⋮ → **Custom repositories** → `https://github.com/turnebre/ha-baby-tracker` · type **Integration**.
 2. Install **Baby Tracker** and restart Home Assistant.
 3. Settings → Devices & services → **Add integration** → **Baby Tracker**. Add one entry per baby.
 
@@ -50,7 +50,7 @@ Copy `custom_components/baby_tracker` into your `config/custom_components/` fold
 
 When adding a baby you set the **name, date of birth, usual bottle size and main milk type**.
 Later, **Configure** lets you change name, date of birth, sex, **unit (oz/ml)** and the **usual poop color/consistency**.
-The **Settings** tab in the panel holds the pediatrician's plan (amount per feeding, interval) and milk limits.
+The **Settings** tab in the panel holds the pediatrician's plan (daily goal, daytime interval, bedtime and wake-up) and milk limits.
 
 > The internal domain is `baby_tracker` (entities and actions use it, e.g. `baby_tracker.log_feeding`).
 

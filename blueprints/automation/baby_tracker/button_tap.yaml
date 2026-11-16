@@ -7,7 +7,7 @@ blueprint:
 
     Pair it with "Baby Tracker – notification buttons" so Undo / Edit buttons work.
   domain: automation
-  source_url: https://github.com/HertBox/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/button_tap.yaml
+  source_url: https://github.com/turnebre/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/button_tap.yaml
   input:
     disparador:
       name: Press trigger

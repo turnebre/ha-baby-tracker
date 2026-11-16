@@ -3,8 +3,14 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); semantic versioning (MAJOR.MINOR.PATCH).
 While the version is 0.x, minor versions may contain breaking changes.
 
-## [Unreleased]
+## [2.1.0]
 ### Changed
+- The pediatrician's plan is now a **daily goal (oz/day)** plus the daytime interval, instead of a goal per feeding. The old
+  `number.*_goal_per_feeding` entity is removed; **re-enter your daily goal** after updating (default 24 oz).
+- New **bedtime / wake-up** settings (`time.*_night_start`, `time.*_night_end`, default 9:00 PM–6:00 AM). No feedings are
+  expected overnight: "Expected by now" stays flat until wake-up and reaches the goal at bedtime, the list of upcoming feedings stops
+  at bedtime (with a top-up at bedtime when it is at least half an interval away), "Next feeding" (and so the reminder) moves to
+  wake-up, and per-feeding amounts are the remaining goal divided by the daytime feedings left. Set both times equal to disable.
 - Growth metrics are entered and shown in pounds and inches (panel, `log_measurement` fields `weight_lb`/`height_in`/`head_in`,
   `list_measurements` output, weight/length sensors). The database still stores kg/cm, so existing data is unaffected.
 

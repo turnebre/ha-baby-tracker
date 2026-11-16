@@ -27,8 +27,9 @@ ENTITY_KEYS = {
                "pumped_today", "pumped_day", "stash_oz", "stash_expires", "breast_milk_wasted_7d",
                "oz_per_hour", "reference_now", "last_diaper", "last_pee", "last_poop", "diapers_today",
                "diapers_per_day", "diaper_interval"],
-    "number": ["oz_per_bottle", "goal_oz_feeding", "prescribed_interval", "bottle_limit",
+    "number": ["oz_per_bottle", "daily_goal", "prescribed_interval", "bottle_limit",
                "breast_milk_limit", "room_expiry", "fridge_expiry"],
+    "time": ["night_start", "night_end"],
 }
 
 

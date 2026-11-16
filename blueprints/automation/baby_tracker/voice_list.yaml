@@ -6,7 +6,7 @@ blueprint:
     entity, logged with the current time, and removed from the list. If the AI fails, the item stays in the
     list and you get a notification. Requires an AI Task integration (e.g. Google Generative AI, OpenAI).
   domain: automation
-  source_url: https://github.com/HertBox/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/voice_list.yaml
+  source_url: https://github.com/turnebre/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/voice_list.yaml
   input:
     list:
       name: To-do list

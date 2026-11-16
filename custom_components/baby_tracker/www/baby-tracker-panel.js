@@ -485,7 +485,12 @@ class BabyPanel extends HTMLElement {
     const el = this.shadowRoot.getElementById("hero"); if (!el) return;
     const last = this._st("last_feeding"), next = this._val("next_feeding");
     const u = last && !["unknown", "unavailable"].includes(last.state) ? last : null;
-    const overdue = next && new Date(next) < new Date();
+    const nowD = new Date(), ga = (this._st("goal_oz_day") || {}).attributes || {};
+    const mins = (x) => { const [h, m] = (x || "").split(":").map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
+    const nm = nowD.getHours() * 60 + nowD.getMinutes(), a = mins(ga.night_start), b = mins(ga.night_end);
+    // Asleep: inside the night window (it may cross midnight), so the next feeding is the wake-up
+    const asleep = a !== null && b !== null && a !== b && (a < b ? nm >= a && nm < b : nm >= a || nm < b);
+    const overdue = next && new Date(next) < nowD && !asleep;
     el.innerHTML = `
       <div class="hero-col">
         <div class="label">${t("Last feeding")}</div>
@@ -495,7 +500,7 @@ class BabyPanel extends HTMLElement {
       <div class="hero-col ${overdue ? "overdue" : ""}">
         <div class="label">${t("Next feeding")}</div>
         <div class="hero-hhmm">${next ? hhmm(next) : "—"}</div>
-        <div class="sub">${next ? (overdue ? `${t("due now")} · ${relative(next)}` : relative(next)) : ""}</div>
+        <div class="sub">${next ? (overdue ? `${t("due now")} · ${relative(next)}` : asleep ? `${t("sleeping")} · ${relative(next)}` : relative(next)) : ""}</div>
       </div>`;
   }
 
@@ -837,6 +842,7 @@ class BabyPanel extends HTMLElement {
   // ---------- Settings ----------
   _htmlSettings() {
     const v = (k) => this._num(k) ?? "";
+    const tv = (k) => (this._val(k) || "").slice(0, 5);
     return `
       <section class="card">
         <h2>${t("Bottle and pediatrician's advice")}</h2>
@@ -853,10 +859,16 @@ class BabyPanel extends HTMLElement {
             <input type="number" name="room_expiry" step="0.5" min="0.5" max="8" inputmode="decimal" value="${v("room_expiry")}"></label>
           <label>${t("Breast milk in the fridge (days)")}
             <input type="number" name="fridge_expiry" step="0.5" min="0.5" max="8" inputmode="decimal" value="${v("fridge_expiry")}"></label>
-          <label>${t("Goal per feeding (oz)")}
-            <input type="number" name="goal_oz_feeding" step="0.5" min="0.5" max="10" inputmode="decimal" value="${v("goal_oz_feeding")}"></label>
-          <label>${t("Every how many hours")}
+          <label>${t("Daily goal (oz)")}
+            <input type="number" name="daily_goal" step="0.5" min="4" max="50" inputmode="decimal" value="${v("daily_goal")}">
+            <span class="help">${t("Total for the whole day, not per bottle.")}</span></label>
+          <label>${t("Every how many hours (daytime)")}
             <input type="number" name="prescribed_interval" step="0.5" min="1" max="6" inputmode="decimal" value="${v("prescribed_interval")}"></label>
+          <label>${t("Bedtime (night starts)")}
+            <input type="time" name="night_start" value="${tv("night_start")}"></label>
+          <label>${t("Wake-up (night ends)")}
+            <input type="time" name="night_end" value="${tv("night_end")}">
+            <span class="help">${t("No feedings are expected between bedtime and wake-up. Use the same time for both if the baby feeds around the clock.")}</span></label>
         </form>
         <p class="sub" id="planned"></p>
         <button class="primary" id="save-settings">${t("Save settings")}</button>
@@ -867,20 +879,38 @@ class BabyPanel extends HTMLElement {
   _eventosSettings() {
     const f = this.shadowRoot.getElementById("form-settings");
     const prev = () => {
-      const m = parseFloat(f.goal_oz_feeding.value), i = parseFloat(f.prescribed_interval.value);
-      this.shadowRoot.getElementById("planned").textContent = (m && i)
-        ? t("Daily goal: {c} ({n} feedings a day). The reminder will fire {h} h after each feeding.", { c: amount(m * 24 / i, 1), n: num(24 / i, 1), h: num(i, 1) })
+      const g = parseFloat(f.daily_goal.value), i = parseFloat(f.prescribed_interval.value);
+      const mins = (x) => { const [h, m] = (x || "").split(":").map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
+      const a = mins(f.night_start.value), b = mins(f.night_end.value);
+      const night = a === null || b === null ? 0 : ((b - a + 1440) % 1440) / 60;
+      const awake = 24 - night;
+      // Same rule as the backend: a feeding every interval while awake, plus one at bedtime if it is at least half an interval away
+      let n = Math.ceil(awake / i);
+      if (night && awake - (n - 1) * i >= i / 2) n += 1;
+      this.shadowRoot.getElementById("planned").textContent = (g && i && n)
+        ? (night
+          ? t("Daily goal: {c}, about {n} feedings of ~{p} between {a} and {b}. Nothing is expected overnight and the reminder waits for wake-up.",
+            { c: amount(g, 1), n, p: amount(g / n, 1), a: hhmm(`2000-01-01T${f.night_end.value}`), b: hhmm(`2000-01-01T${f.night_start.value}`) })
+          : t("Daily goal: {c}, about {n} feedings of ~{p} around the clock. The reminder will fire {h} h after each feeding.",
+            { c: amount(g, 1), n, p: amount(g / n, 1), h: num(i, 1) }))
         : "";
     };
     f.addEventListener("input", prev); prev();
     this.shadowRoot.getElementById("save-settings").onclick = async () => {
       const changes = ["oz_per_bottle", "bottle_limit", "breast_milk_limit", "room_expiry", "fridge_expiry",
-        "goal_oz_feeding", "prescribed_interval"]
+        "daily_goal", "prescribed_interval"]
         .filter((k) => f[k].value !== "" && Number(f[k].value) !== this._num(k));
-      if (!changes.length) { this._notice(t("No changes")); return; }
+      const timeChanges = ["night_start", "night_end"]
+        .filter((k) => f[k].value !== "" && f[k].value !== (this._val(k) || "").slice(0, 5));
+      if (!changes.length && !timeChanges.length) { this._notice(t("No changes")); return; }
+      const missing = [...changes, ...timeChanges].filter((k) => !this._cfg.entities[k]);
+      if (missing.length) { this._notice(t("Settings not available yet ({k}): restart Home Assistant (or reload the Baby Tracker integration) and refresh this page.", { k: missing.join(", ") })); return; }
       await this._action(async () => {
         for (const k of changes) {
           await this._hass.callService("number", "set_value", { entity_id: this._cfg.entities[k], value: Number(f[k].value) });
+        }
+        for (const k of timeChanges) {
+          await this._hass.callService("time", "set_value", { entity_id: this._cfg.entities[k], time: `${f[k].value}:00` });
         }
       }, t("Settings saved"));
     };
@@ -890,7 +920,7 @@ class BabyPanel extends HTMLElement {
   _paintSuggestion() {
     const el = this.shadowRoot.getElementById("suggestion"); if (!el) return;
     const ozFeeding = this._num("oz_per_feeding"), perDay = this._num("feedings_per_day"), pct = this._num("pct_finished");
-    const wasted = this._num("wasted_7d"), ozBottle = this._num("oz_per_bottle"), goal = this._num("goal_oz_feeding");
+    const wasted = this._num("wasted_7d"), ozBottle = this._num("oz_per_bottle"), goalSt = this._st("goal_oz_day"), goal = goalSt ? goalSt.attributes.planned_oz_feeding ?? null : null;
     if (ozFeeding === null) { el.textContent = t("Not enough records yet."); return; }
     const lines = [t("Drinks on average <b>{c}</b> per feeding, about <b>{n}</b> times a day.", { c: amount(ozFeeding, 2), n: num(perDay, 1) })];
     if (pct !== null) lines.push(t("Finished <b>{p}%</b> of bottles; <b>{c}</b> of formula was wasted.", { p: pct, c: amount(wasted, 1) }));
@@ -1408,7 +1438,8 @@ class BabyPanel extends HTMLElement {
         both: pans.filter((x) => x.type === "both" && inside(x.ended_at)).length / div,
       };
     });
-    const goal = this._num("goal_oz_day"), interval = this._num("prescribed_interval"), ozGoal = this._num("goal_oz_feeding");
+    const goal = this._num("goal_oz_day"), goalAttrs = (this._st("goal_oz_day") || {}).attributes || {};
+    const feedingsGoal = goalAttrs.feedings_per_day ?? null, ozGoal = goalAttrs.planned_oz_feeding ?? null;
     const labels = agg.map((x) => x.et);
     const suf = p === "day" ? t("per day") : t("average per day");
     const r = this.shadowRoot, color = "var(--primary-color)";
@@ -1418,7 +1449,7 @@ class BabyPanel extends HTMLElement {
     r.getElementById("g-oz").innerHTML = bars({ labels, unit: U(), ...this._metasChart(groups, goal),
       series: [series("exact", TYPES.formula, color), series("estimated", TYPES.breast_milk, "var(--breast_milk-color, #e91e63)")] });
     r.getElementById("t-feedings").textContent = `${t("Feedings")} ${suf}`;
-    r.getElementById("g-feedings").innerHTML = bars({ labels, unit: t("feedings"), goal: interval ? 24 / interval : null,
+    r.getElementById("g-feedings").innerHTML = bars({ labels, unit: t("feedings"), goal: feedingsGoal,
       series: [series("feedings", t("feedings"), "var(--accent-color, #ff9800)")] });
     r.getElementById("g-ozFeeding").innerHTML = bars({ labels, unit: U(), goal: ozGoal ? toUnit(ozGoal) : null, height: 150,
       series: [series("ozFeeding", t("per feeding"), "var(--success-color, #43a047)")] });

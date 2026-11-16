@@ -99,15 +99,23 @@
     }
   },
   "entity": {
+    "time": {
+      "night_start": {
+        "name": "Bedtime (night starts)"
+      },
+      "night_end": {
+        "name": "Wake-up (night ends)"
+      }
+    },
     "number": {
       "oz_per_bottle": {
         "name": "Bottle size"
       },
-      "goal_oz_feeding": {
-        "name": "Goal per feeding (pediatrician)"
+      "daily_goal": {
+        "name": "Daily goal (pediatrician)"
       },
       "prescribed_interval": {
-        "name": "Recommended interval (pediatrician)"
+        "name": "Daytime feeding interval (pediatrician)"
       },
       "bottle_limit": {
         "name": "Limit to use a started bottle"

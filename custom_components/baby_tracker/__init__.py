@@ -20,6 +20,7 @@ from homeassistant.core import (
 )
 from homeassistant.exceptions import ServiceValidationError
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -45,7 +46,9 @@ from .const import (
     FRIDGE_EXPIRY_DEFAULT_DAYS,
     BOTTLE_LIMIT_DEFAULT_H,
     BREAST_MILK_LIMIT_DEFAULT_H,
-    GOAL_OZ_FEEDING_DEFAULT,
+    GOAL_OZ_DAY_DEFAULT,
+    NIGHT_START_DEFAULT,
+    NIGHT_END_DEFAULT,
     TYPES,
     DIAPER_TYPES,
     FUTURE_TOLERANCE_MIN,
@@ -57,7 +60,7 @@ from .coordinator import BabyCoordinator, BabyRuntime
 from .db import BabyDB, BabyError
 from .panel import async_update_panel
 
-PLATFORMS = [Platform.NUMBER, Platform.SENSOR]
+PLATFORMS = [Platform.NUMBER, Platform.SENSOR, Platform.TIME]
 
 OZ = vol.All(vol.Coerce(float), vol.Range(min=0, max=12))
 OZ_POS = vol.All(vol.Coerce(float), vol.Range(min=0.05, max=12))
@@ -604,14 +607,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Each baby has their own database; the first one uses baby_tracker.db
     db = BabyDB(hass.config.path(entry.data.get(CONF_DB, DB_FILENAME)))
     await hass.async_add_executor_job(db.initialize)
+    # The per-feeding goal was replaced by a daily goal: drop the orphaned entity
+    registry = er.async_get(hass)
+    if old := registry.async_get_entity_id("number", DOMAIN, f"{entry.entry_id}_goal_oz_feeding"):
+        registry.async_remove(old)
     coordinator = BabyCoordinator(hass, entry, db)
     entry.runtime_data = BabyRuntime(
         db=db,
         coordinator=coordinator,
         oz_default=entry.data[CONF_OZ_DEFAULT],
         type_default=entry.data[CONF_TYPE_DEFAULT],
-        goal_oz_feeding=GOAL_OZ_FEEDING_DEFAULT,
+        goal_oz_day=GOAL_OZ_DAY_DEFAULT,
         prescribed_interval_h=PRESCRIBED_INTERVAL_DEFAULT_H,
+        night_start=NIGHT_START_DEFAULT,
+        night_end=NIGHT_END_DEFAULT,
         bottle_limit_h=BOTTLE_LIMIT_DEFAULT_H,
         breast_milk_limit_h=BREAST_MILK_LIMIT_DEFAULT_H,
         room_expiry_h=ROOM_EXPIRY_DEFAULT_H,

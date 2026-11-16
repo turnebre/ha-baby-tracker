@@ -1,5 +1,7 @@
 """Constants for the Baby Tracker integration."""
 
+from datetime import time
+
 DOMAIN = "baby_tracker"
 DB_FILENAME = "baby_tracker.db"
 # Database file for each baby (one config entry per baby); the first one uses baby_tracker.db
@@ -33,7 +35,10 @@ ML_PER_KG_DAY = 150
 OZ_DAY_MAX = 32
 
 # Pediatrician's guidance (adjustable from the UI with number entities)
-GOAL_OZ_FEEDING_DEFAULT = 3.0
+GOAL_OZ_DAY_DEFAULT = 24.0
+# Overnight sleep window: no feedings are expected between bedtime and wake-up (equal times = no night)
+NIGHT_START_DEFAULT = time(21, 0)
+NIGHT_END_DEFAULT = time(6, 0)
 PRESCRIBED_INTERVAL_DEFAULT_H = 3.0
 # Time since the first feeding after which preparing another bottle is suggested
 BOTTLE_LIMIT_DEFAULT_H = 1.5

@@ -5,7 +5,7 @@ blueprint:
     incomplete and its remainder counts as wasted. Sends a notification with an Undo button
     (requires "Baby Tracker – notification buttons").
   domain: automation
-  source_url: https://github.com/HertBox/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/button_hold.yaml
+  source_url: https://github.com/turnebre/ha-baby-tracker/blob/main/blueprints/automation/baby_tracker/button_hold.yaml
   input:
     disparador:
       name: Hold trigger
