@@ -284,13 +284,13 @@ class BabyPanel extends HTMLElement {
 
   _paint() {
     const c = this.shadowRoot.getElementById("content");
-    if (this._tab === "today") { c.innerHTML = this._htmlToday(); this._paintSummary(); this._eventosToday(); }
-    if (this._tab === "settings") { c.innerHTML = this._htmlSettings(); this._eventosSettings(); }
+    if (this._tab === "today") { c.innerHTML = this._htmlToday(); this._paintSummary(); this._bindToday(); }
+    if (this._tab === "settings") { c.innerHTML = this._htmlSettings(); this._bindSettings(); }
     if (this._tab === "feedings") { c.innerHTML = `<div id="feedings"></div>`; this._loadFeedings(); }
-    if (this._tab === "breast_milk") { c.innerHTML = this._htmlBreastMilk(); this._eventosBreastMilk(); this._loadBreastMilk(); }
-    if (this._tab === "measurements") { c.innerHTML = this._htmlMeasurements(); this._eventosMeasurements(); this._loadMeasurements(); }
+    if (this._tab === "breast_milk") { c.innerHTML = this._htmlBreastMilk(); this._bindBreastMilk(); this._loadBreastMilk(); }
+    if (this._tab === "measurements") { c.innerHTML = this._htmlMeasurements(); this._bindMeasurements(); this._loadMeasurements(); }
     if (this._tab === "milestones") { c.innerHTML = `<div id="milestones"></div>`; this._loadMilestones(); }
-    if (this._tab === "charts") { c.innerHTML = this._htmlCharts(); this._eventosCharts(); this._paintCharts(); }
+    if (this._tab === "charts") { c.innerHTML = this._htmlCharts(); this._bindCharts(); this._paintCharts(); }
   }
 
   // ---------- Today ----------
@@ -611,11 +611,11 @@ class BabyPanel extends HTMLElement {
     };
   }
 
-  _eventosToday() {
+  _bindToday() {
     const r = this.shadowRoot;
     r.getElementById("save-new").addEventListener("click", async () => {
       const f = r.getElementById("form-new");
-      let data = this._leerForm(f, true);
+      let data = this._readForm(f, true);
       if (!data) return;
       data = await this._feedingBreastMilk(data);
       if (!data) return;
@@ -635,7 +635,7 @@ class BabyPanel extends HTMLElement {
     </form>`;
   }
 
-  _leerForm(f, withNew = false) {
+  _readForm(f, withNew = false) {
     if (!f.ended_at.value) { this._notice(t("Enter the time")); return null; }
     const oz = toOz(parseFloat(String(f.oz_taken.value).replace(",", ".")));
     if (!(oz > 0 && oz <= 12)) { this._notice(t("Enter how much was drunk")); return null; }
@@ -773,7 +773,7 @@ class BabyPanel extends HTMLElement {
     if (confidence) f.addEventListener("input", (e) => { if (e.target.name === "oz_taken") confidence.value = "exact"; });
     const ready = (msg) => (async () => { close(); this._loadFeedings(); if (msg) this._notice(msg); })();
     dlg.querySelector("#save").onclick = async () => {
-      let d = this._leerForm(f, isNew); if (!d) return;
+      let d = this._readForm(f, isNew); if (!d) return;
       if (isNew) {
         d = await this._feedingBreastMilk(d); if (!d) return;
         await this._action(() => this._service("log_feeding", { ...d, source: "app" }, true), t("Feeding added"));
@@ -876,7 +876,7 @@ class BabyPanel extends HTMLElement {
       <section class="card"><h2>${t("What the last 7 days say")}</h2><div id="suggestion" class="sub"></div></section>`;
   }
 
-  _eventosSettings() {
+  _bindSettings() {
     const f = this.shadowRoot.getElementById("form-settings");
     const prev = () => {
       const g = parseFloat(f.daily_goal.value), i = parseFloat(f.prescribed_interval.value);
@@ -1034,7 +1034,7 @@ class BabyPanel extends HTMLElement {
     });
   }
 
-  _eventosBreastMilk() {
+  _bindBreastMilk() {
     const r = this.shadowRoot;
     r.getElementById("btn-save").onclick = async () => {
       const f = r.getElementById("form-save");
@@ -1150,7 +1150,7 @@ class BabyPanel extends HTMLElement {
       <section class="card"><h2>${t("History")}</h2><div id="list-measurements"></div></section>`;
   }
 
-  _eventosMeasurements() {
+  _bindMeasurements() {
     const r = this.shadowRoot;
     r.getElementById("save-measurement").onclick = async () => {
       const f = r.getElementById("form-measurement");
@@ -1363,7 +1363,7 @@ class BabyPanel extends HTMLElement {
       <section class="card"><h2>${t("When are diapers changed? (average per hour, 7 days)")}</h2><div id="g-hhmm-pan"></div></section>`;
   }
 
-  _eventosCharts() {
+  _bindCharts() {
     this.shadowRoot.querySelector(".segments").addEventListener("click", (e) => {
       const b = e.target.closest("button[data-p]"); if (!b) return;
       this._period = b.dataset.p;

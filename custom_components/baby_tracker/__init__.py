@@ -488,7 +488,7 @@ async def _list_bottles(hass: HomeAssistant, call: ServiceCall) -> ServiceRespon
 
 
 # ------------------------------------------------------------------ developmental milestones
-def _leer_ids_milestones() -> set[str]:
+def _read_milestone_ids() -> set[str]:
     catalog = json.loads((Path(__file__).parent / "www" / "milestones.json").read_text(encoding="utf-8"))
     return {step["id"] for skill in catalog["skills"] for step in skill["steps"]}
 
@@ -496,7 +496,7 @@ def _leer_ids_milestones() -> set[str]:
 async def _validate_milestone(hass: HomeAssistant, milestone_id: str) -> None:
     data = hass.data[DOMAIN]
     if "milestones_ids" not in data:
-        data["milestones_ids"] = await hass.async_add_executor_job(_leer_ids_milestones)
+        data["milestones_ids"] = await hass.async_add_executor_job(_read_milestone_ids)
     if milestone_id not in data["milestones_ids"]:
         raise _error("milestone_not_found", id=milestone_id)
 

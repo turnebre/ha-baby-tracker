@@ -316,8 +316,8 @@ class BabyDB:
                                oz=changes.get("oz") or max(r["oz"], current["consumed"]))
                 con.execute("UPDATE bottles SET pumping_id = ? WHERE id = ?", (r["pumping_id"], bid))
                 con.execute("UPDATE bottles SET deleted = 1 WHERE id = ?", (r["id"],))
-        fields = [c for c in ("oz", "type", "note", "made_at", "location") if c in changes]
-        with self._con() as con:
+            # Same transaction as the stash conversion above, so a failure rolls back both
+            fields = [c for c in ("oz", "type", "note", "made_at", "location") if c in changes]
             if fields:
                 con.execute(
                     f"UPDATE bottles SET {', '.join(f'{c} = ?' for c in fields)} WHERE id = ? AND deleted = 0",
