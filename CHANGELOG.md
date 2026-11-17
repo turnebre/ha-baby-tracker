@@ -24,6 +24,7 @@ While the version is 0.x, minor versions may contain breaking changes.
 - "Import data from a previous install" option when adding a baby: copies a legacy `bebe*.db` into the new English schema
   (the original file is never modified).
 ### Removed
+- The **Milestones** tab in the panel. The `mark_milestone`, `unmark_milestone` and `list_milestones` actions and the stored data are unchanged.
 - Upgrade code for databases older than the Spanish schema v6 (use the importer instead).
 
 ## [1.2.0] - 2026-11-02

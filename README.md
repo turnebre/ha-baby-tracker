@@ -31,7 +31,6 @@ Everything is stored **locally** in your Home Assistant (SQLite). No cloud, no a
   % finished, wasted formula, pumped milk, diapers, and *when* the baby eats / needs a change.
 - **Pediatrician's plan** — a daily goal in oz, the daytime feeding interval and a bedtime/wake-up window. Nothing is expected overnight; the per-feeding amounts, the "expected by now" curve and the reminder follow it.
 - **Growth** — weight (lb), length (in) and head circumference (in) history.
-- **Milestones** — first year, week by week: CDC milestones grouped into skills, tick them when you notice them and see progress by skill and area. A guide, not a test or a deadline.
 - **Several babies** (twins!) — one entry per baby, a selector in the panel.
 - **oz or ml** units.
 - **Blueprints** for buttons, reminders, milk expiry, notification actions and voice.
@@ -64,7 +63,6 @@ A **Baby Tracker** entry appears in the sidebar (and in the companion app):
 | **Feedings** | Day view grouped by bottle; edit, delete, move feedings; diapers of the day |
 | **Breast milk** | Stash with expiry, save milk, log pumping sessions |
 | **Growth** | Weight / length / head circumference and their charts |
-| **Milestones** | Week-by-week first year: milestones to tick, what is normal, ideas, progress by skill |
 | **Charts** | Day / week / month charts |
 | **Settings** | Bottle size, pediatrician's plan, milk limits, hints from the last 7 days |
 
