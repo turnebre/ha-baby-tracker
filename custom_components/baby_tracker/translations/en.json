@@ -12,6 +12,7 @@
           "poop_color_default": "Usual poop color (preselected)",
           "poop_consistency_default": "Usual poop consistency (preselected)",
           "unit": "Unit",
+          "growth_unit": "Growth units",
           "import_db": "Import data from a previous install (optional)"
         },
         "description": "Your baby's details. You can change them later in “Configure”.",
@@ -95,6 +96,12 @@
       "options": {
         "oz": "Ounces (oz)",
         "ml": "Milliliters (ml)"
+      }
+    },
+    "growth_unit": {
+      "options": {
+        "imperial": "Imperial (lb, in)",
+        "metric": "Metric (kg, cm)"
       }
     }
   },
@@ -375,13 +382,39 @@
           "name": "Length (in)",
           "description": "Length in inches."
         },
+        "weight_kg": {
+          "name": "Weight (kg)",
+          "description": "Weight in kilograms (use this or weight_lb)."
+        },
+        "height_cm": {
+          "name": "Length (cm)",
+          "description": "Length in centimeters (use this or height_in)."
+        },
         "head_in": {
           "name": "Head circumference (in)",
-          "description": "Head circumference."
+          "description": "Head circumference in inches."
+        },
+        "head_cm": {
+          "name": "Head circumference (cm)",
+          "description": "Head circumference in centimeters (use this or head_in)."
         },
         "note": {
           "name": "Note",
           "description": "Free text."
+        },
+        "baby": {
+          "name": "Baby",
+          "description": "Only if you have several babies: which one it applies to (default: the only one)."
+        }
+      }
+    },
+    "set_growth_unit": {
+      "name": "Set growth units",
+      "description": "Chooses whether growth measurements are entered and shown in lb/in or kg/cm. Stored data is not changed.",
+      "fields": {
+        "growth_unit": {
+          "name": "Growth units",
+          "description": "Imperial (lb, in) or metric (kg, cm)."
         },
         "baby": {
           "name": "Baby",
@@ -873,7 +906,8 @@
           "sex": "Sex (for growth charts)",
           "poop_color_default": "Usual poop color (preselected)",
           "poop_consistency_default": "Usual poop consistency (preselected)",
-          "unit": "Unit"
+          "unit": "Unit",
+          "growth_unit": "Growth units"
         },
         "description": "Change the usual poop when feeding or age changes."
       }
@@ -914,7 +948,7 @@
       "message": "Diaper {id} does not exist"
     },
     "missing_measurement": {
-      "message": "Provide at least weight_lb, height_in or head_in"
+      "message": "Provide at least one of weight_lb/weight_kg, height_in/height_cm or head_in/head_cm"
     },
     "measurement_not_found": {
       "message": "Measurement {id} does not exist"

@@ -26,8 +26,11 @@ from .const import (
     CONF_OZ_DEFAULT,
     CONF_SEX,
     CONF_TYPE_DEFAULT,
+    CONF_GROWTH_UNIT,
     CONF_UNIT,
     DOMAIN,
+    GROWTH_UNIT_DEFAULT,
+    GROWTH_UNITS,
     SEXES,
     TYPES,
     UNITS,
@@ -50,6 +53,9 @@ def _baby_schema(current: dict[str, Any]) -> dict:
         ),
         vol.Optional(CONF_UNIT, default=current.get(CONF_UNIT, "oz")): selector.SelectSelector(
             selector.SelectSelectorConfig(options=UNITS, translation_key="unit")
+        ),
+        vol.Optional(CONF_GROWTH_UNIT, default=current.get(CONF_GROWTH_UNIT, GROWTH_UNIT_DEFAULT)): selector.SelectSelector(
+            selector.SelectSelectorConfig(options=GROWTH_UNITS, translation_key="growth_unit")
         ),
         vol.Optional(CONF_POOP_COLOR, default=current.get(CONF_POOP_COLOR, POOP_COLOR_DEFAULT)): selector.SelectSelector(
             selector.SelectSelectorConfig(options=[c for c in POOP_COLORS if c != "not_sure"], translation_key="poop_color")

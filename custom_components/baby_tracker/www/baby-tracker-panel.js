@@ -17,6 +17,11 @@ const U = () => UNIT;
 const isMl = () => UNIT === "ml";
 const toUnit = (oz) => (isMl() ? oz * ML_PER_OZ : oz);
 const toOz = (v) => (isMl() ? v / ML_PER_OZ : v);
+// Growth unit system (Configure or Settings): the database always stores kg/cm
+let GROWTH = "imperial";
+const G = () => (GROWTH === "metric"
+  ? { w: "kg", l: "cm", wKey: "weight_kg", lKey: "height_cm", hKey: "head_cm", wMin: 0.5, wMax: 30, lMin: 20, lMax: 130, hMin: 20, hMax: 60, wStep: 0.01 }
+  : { w: "lb", l: "in", wKey: "weight_lb", lKey: "height_in", hKey: "head_in", wMin: 1, wMax: 66, lMin: 8, lMax: 51, hMin: 8, hMax: 24, wStep: 0.01 });
 // Number in the unit (no suffix) and amount with suffix
 const amountN = (oz, d = 2) => (oz === null || oz === undefined || oz === "" || isNaN(oz)) ? "—"
   : isMl() ? String(Math.round(oz * ML_PER_OZ)) : num(oz, d);
@@ -161,6 +166,7 @@ class BabyPanel extends HTMLElement {
   _chooseBaby(b, repaint = true) {
     this._cfg = b;
     UNIT = b.unit === "ml" ? "ml" : "oz";
+    GROWTH = b.growth_unit === "metric" ? "metric" : "imperial";
     try { localStorage.setItem("baby_tracker_baby", b.entry_id); } catch (e) { /* no storage available */ }
     if (repaint && this._ready) {
       const n = this.shadowRoot.getElementById("title-name"); if (n) n.textContent = b.name;
@@ -193,6 +199,12 @@ class BabyPanel extends HTMLElement {
   // ---------- utilities ----------
   _st(key) { const id = this._cfg.entities[key]; return id ? this._hass.states[id] : undefined; }
   _val(key) { const s = this._st(key); return s && !["unknown", "unavailable"].includes(s.state) ? s.state : null; }
+  // Unit the weight/height sensor reports in; it can lag behind a just-changed setting until the integration reloads
+  _growthUnit(key, fallback) {
+    const s = this._st(key);
+    return (s && s.attributes && s.attributes.unit_of_measurement) || fallback;
+  }
+
   _num(key) { const v = this._val(key); return v === null ? null : Number(v); }
 
   async _service(service, data, answer = false) {
@@ -400,7 +412,7 @@ class BabyPanel extends HTMLElement {
       <div class="kpi"><div class="label">${t("Bottles finished (7 d)")}</div><div class="num">${pct === null ? "—" : `${pct}<small>%</small>`}</div>
         <div class="sub">${t("wasted")} ${amount(this._num("wasted_7d"), 1)}</div></div>
       <div class="kpi"><div class="label">${t("Age")}</div><div class="num sm">${ageText(this._val("age"))}</div></div>
-      <div class="kpi"><div class="label">${t("Weight · Length")}</div><div class="num sm">${num(this._num("weight"), 2)} lb · ${num(this._num("height"), 1)} in</div></div>`;
+      <div class="kpi"><div class="label">${t("Weight · Length")}</div><div class="num sm">${num(this._num("weight"), 2)} ${this._growthUnit("weight", G().w)} · ${num(this._num("height"), 1)} ${this._growthUnit("height", G().l)}</div></div>`;
   }
 
   // Progress of the day against two goals: minimum and ideal (the smaller and larger of the pediatrician's and the weight-based one)
@@ -841,6 +853,18 @@ class BabyPanel extends HTMLElement {
         <p class="sub" id="planned"></p>
         <button class="primary" id="save-settings">${t("Save settings")}</button>
       </section>
+      <section class="card">
+        <h2>${t("Units")}</h2>
+        <form class="form" id="form-units" onsubmit="return false">
+          <label>${t("Growth units")}
+            <select name="growth_unit">
+              <option value="imperial"${GROWTH === "imperial" ? " selected" : ""}>${t("Imperial (lb, in)")}</option>
+              <option value="metric"${GROWTH === "metric" ? " selected" : ""}>${t("Metric (kg, cm)")}</option>
+            </select>
+            <span class="help">${t("How weight, length and head circumference are entered and shown. Saved measurements are not changed.")}</span></label>
+        </form>
+        <button class="primary" id="save-units">${t("Save units")}</button>
+      </section>
       <section class="card"><h2>${t("What the last 7 days say")}</h2><div id="suggestion" class="sub"></div></section>`;
   }
 
@@ -881,6 +905,15 @@ class BabyPanel extends HTMLElement {
           await this._hass.callService("time", "set_value", { entity_id: this._cfg.entities[k], time: `${f[k].value}:00` });
         }
       }, t("Settings saved"));
+    };
+    this.shadowRoot.getElementById("save-units").onclick = async () => {
+      const unit = this.shadowRoot.getElementById("form-units").growth_unit.value;
+      if (unit === GROWTH) { this._notice(t("No changes")); return; }
+      await this._action(() => this._service("set_growth_unit", { growth_unit: unit }), t("Units saved"));
+      // The integration reloads in the background; update the panel now instead of waiting for it
+      this._cfg.growth_unit = unit;
+      GROWTH = unit;
+      this._paint();
     };
     this._paintSuggestion();
   }
@@ -1101,20 +1134,21 @@ class BabyPanel extends HTMLElement {
 
   // ---------- Measurements ----------
   _htmlMeasurements() {
+    const g = G();
     return `
       <section class="card">
         <h2>${t("New measurement")}</h2>
         <form class="form" id="form-measurement" onsubmit="return false">
           <label class="complete">${t("Date")}<input type="datetime-local" name="date" value="${toInputLocal(new Date())}"></label>
-          <label>${t("Weight (lb)")}<input type="number" name="weight_lb" step="0.01" min="1" max="66" inputmode="decimal"></label>
-          <label>${t("Length (in)")}<input type="number" name="height_in" step="0.1" min="8" max="51" inputmode="decimal"></label>
-          <label>${t("Head circumference (in)")}<input type="number" name="head_in" step="0.1" min="8" max="24" inputmode="decimal"></label>
+          <label>${t("Weight ({u})", { u: g.w })}<input type="number" name="${g.wKey}" step="${g.wStep}" min="${g.wMin}" max="${g.wMax}" inputmode="decimal"></label>
+          <label>${t("Length ({u})", { u: g.l })}<input type="number" name="${g.lKey}" step="0.1" min="${g.lMin}" max="${g.lMax}" inputmode="decimal"></label>
+          <label>${t("Head circumference ({u})", { u: g.l })}<input type="number" name="${g.hKey}" step="0.1" min="${g.hMin}" max="${g.hMax}" inputmode="decimal"></label>
           <label>${t("Note")}<input type="text" name="note" placeholder="${t("e.g. pediatrician visit")}"></label>
         </form>
         <button class="primary" id="save-measurement">${t("Save measurement")}</button>
       </section>
-      <section class="card"><h2>${t("Weight (lb) by age")}</h2><div id="g-weight"></div></section>
-      <section class="card"><h2>${t("Length (in) by age")}</h2><div id="g-height"></div></section>
+      <section class="card"><h2>${t("Weight ({u}) by age", { u: g.w })}</h2><div id="g-weight"></div></section>
+      <section class="card"><h2>${t("Length ({u}) by age", { u: g.l })}</h2><div id="g-height"></div></section>
       <section class="card"><h2>${t("History")}</h2><div id="list-measurements"></div></section>`;
   }
 
@@ -1123,9 +1157,10 @@ class BabyPanel extends HTMLElement {
     r.getElementById("save-measurement").onclick = async () => {
       const f = r.getElementById("form-measurement");
       const d = { date: toServiceDate(f.date.value) };
-      ["weight_lb", "height_in", "head_in"].forEach((k) => { if (f[k].value !== "") d[k] = parseFloat(f[k].value); });
+      const g = G();
+      [g.wKey, g.lKey, g.hKey].forEach((k) => { if (f[k].value !== "") d[k] = parseFloat(f[k].value); });
       if (f.note.value.trim()) d.note = f.note.value.trim();
-      if (!d.weight_lb && !d.height_in && !d.head_in) { this._notice(t("Enter at least weight, length or head circumference")); return; }
+      if (!d[g.wKey] && !d[g.lKey] && !d[g.hKey]) { this._notice(t("Enter at least weight, length or head circumference")); return; }
       await this._action(() => this._service("log_measurement", d, true), t("Measurement saved"));
       f.reset(); f.date.value = toInputLocal(new Date());
       this._loadMeasurements();
@@ -1137,17 +1172,18 @@ class BabyPanel extends HTMLElement {
     catch (e) { this._notice(`${t("Error")}: ${e.message}`); return; }
     const birth = new Date(this._cfg.birth + "T00:00");
     const age = (iso) => Math.max(0, Math.round((startOfDay(new Date(iso)) - birth) / 86400000));
+    const g = G();
     const pts = (field) => this._measurements.filter((m) => m[field] != null).map((m) => ({ x: age(m.date), y: m[field] }));
     const r = this.shadowRoot;
-    r.getElementById("g-weight").innerHTML = line({ dots: pts("weight_lb"), unit: "lb" });
-    r.getElementById("g-height").innerHTML = line({ dots: pts("height_in"), unit: "in" });
+    r.getElementById("g-weight").innerHTML = line({ dots: pts(g.wKey), unit: g.w });
+    r.getElementById("g-height").innerHTML = line({ dots: pts(g.lKey), unit: g.l });
     const list = r.getElementById("list-measurements");
     list.innerHTML = this._measurements.length ? `<ul class="list">${this._measurements.slice().reverse().map((m) => {
       const d = new Date(m.date);
       return `<li class="measurement">
         <span class="hhmm">${d.getDate()} ${MONTHS[d.getMonth()]}</span>
-        <span class="oz">${[m.weight_lb != null ? `${num(m.weight_lb, 2)} lb` : "", m.height_in != null ? `${num(m.height_in, 1)} in` : "",
-          m.head_in != null ? `${t("HC")} ${num(m.head_in, 1)}` : ""].filter(Boolean).join(" · ")}</span>
+        <span class="oz">${[m[g.wKey] != null ? `${num(m[g.wKey], 2)} ${g.w}` : "", m[g.lKey] != null ? `${num(m[g.lKey], 1)} ${g.l}` : "",
+          m[g.hKey] != null ? `${t("HC")} ${num(m[g.hKey], 1)}` : ""].filter(Boolean).join(" · ")}</span>
         <span class="goal-t">${t("{n} days", { n: age(m.date) })}${m.note ? ` · ${esc(m.note)}` : ""}</span>
         <button class="icon" data-delete="${m.id}" aria-label="${t("Delete")}">✕</button>
       </li>`;

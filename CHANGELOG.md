@@ -3,6 +3,16 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); semantic versioning (MAJOR.MINOR.PATCH).
 While the version is 0.x, minor versions may contain breaking changes.
 
+## [Unreleased]
+### Added
+- **Growth units** option (imperial lb/in or metric kg/cm) when adding a baby, in **Configure**, and in the panel's **Settings** tab
+  (new `baby_tracker.set_growth_unit` action). It controls the Growth tab, the Today summary and the weight/length sensors.
+  Defaults to imperial, so existing babies are unchanged; stored data is not affected.
+- `log_measurement` also accepts `weight_kg`, `height_cm` and `head_cm` (use either set per measurement), and `list_measurements`
+  returns both the metric and imperial fields.
+- Note: switching a baby to metric changes the unit of its weight and length sensors, so Home Assistant may offer a one-time
+  statistics fix in **Developer tools → Statistics**.
+
 ## [2.0.0] - English-only fork
 ### Changed
 - The whole codebase is now English: identifiers, comments, SQLite tables and columns, stored values, services (actions),

@@ -26,6 +26,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CM_PER_IN,
     CONF_DB,
+    CONF_GROWTH_UNIT,
     CONF_UNIT,
     CONF_BABY_NAME,
     POOP_COLOR_DEFAULT,
@@ -47,6 +48,8 @@ from .const import (
     BOTTLE_LIMIT_DEFAULT_H,
     BREAST_MILK_LIMIT_DEFAULT_H,
     GOAL_OZ_DAY_DEFAULT,
+    GROWTH_UNIT_DEFAULT,
+    GROWTH_UNITS,
     NIGHT_START_DEFAULT,
     NIGHT_END_DEFAULT,
     TYPES,
@@ -175,13 +178,19 @@ MILESTONE_SCHEMA = vol.Schema({
 
 MILESTONE_ID_SCHEMA = vol.Schema({vol.Required("milestone_id"): cv.string})
 
+# Each measurement can be given in imperial (lb/in) or metric (kg/cm), whatever the baby's growth unit is
 MEASUREMENT_SCHEMA = vol.Schema({
     vol.Optional("date"): cv.datetime,
-    vol.Optional("weight_lb"): vol.All(vol.Coerce(float), vol.Range(min=1, max=66)),
-    vol.Optional("height_in"): vol.All(vol.Coerce(float), vol.Range(min=8, max=51)),
-    vol.Optional("head_in"): vol.All(vol.Coerce(float), vol.Range(min=8, max=24)),
+    vol.Exclusive("weight_lb", "weight"): vol.All(vol.Coerce(float), vol.Range(min=1, max=66)),
+    vol.Exclusive("weight_kg", "weight"): vol.All(vol.Coerce(float), vol.Range(min=0.5, max=30)),
+    vol.Exclusive("height_in", "height"): vol.All(vol.Coerce(float), vol.Range(min=8, max=51)),
+    vol.Exclusive("height_cm", "height"): vol.All(vol.Coerce(float), vol.Range(min=20, max=130)),
+    vol.Exclusive("head_in", "head"): vol.All(vol.Coerce(float), vol.Range(min=8, max=24)),
+    vol.Exclusive("head_cm", "head"): vol.All(vol.Coerce(float), vol.Range(min=20, max=60)),
     vol.Optional("note"): cv.string,
 })
+
+GROWTH_UNIT_SCHEMA = vol.Schema({vol.Required(CONF_GROWTH_UNIT): vol.In(GROWTH_UNITS)})
 
 
 def _error(key: str, **data: Any) -> ServiceValidationError:
@@ -523,14 +532,20 @@ async def _list_milestones(hass: HomeAssistant, call: ServiceCall) -> ServiceRes
 
 
 # ------------------------------------------------------------------ measurements
+MEASUREMENT_FIELDS = ("weight_lb", "weight_kg", "height_in", "height_cm", "head_in", "head_cm")
+
+
 async def _log_measurement(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
     rt = _runtime(hass, call)
     d: dict[str, Any] = dict(call.data)
-    if not any(k in d for k in ("weight_lb", "height_in", "head_in")):
+    if not any(k in d for k in MEASUREMENT_FIELDS):
         raise _error("missing_measurement")
     d["date"] = _a_utc(d.get("date") or dt_util.now(), "date")
     d["logged_by"] = await _user(hass, call)
-    stored = {k: v for k, v in d.items() if k not in ("weight_lb", "height_in", "head_in")}
+    stored = {k: v for k, v in d.items() if k not in MEASUREMENT_FIELDS}
+    for k in ("weight_kg", "height_cm", "head_cm"):
+        if k in d:
+            stored[k] = d[k]
     if "weight_lb" in d:
         stored["weight_kg"] = round(d["weight_lb"] / LB_PER_KG, 4)
     if "height_in" in d:
@@ -543,19 +558,30 @@ async def _log_measurement(hass: HomeAssistant, call: ServiceCall) -> ServiceRes
     return {"id": measurement_id}
 
 
-def _imperial(row: dict[str, Any]) -> dict[str, Any]:
-    """Convert a stored (kg/cm) measurement row to lb/in for the API."""
-    out = {k: v for k, v in row.items() if k not in ("weight_kg", "height_cm", "head_cm")}
+def _with_units(row: dict[str, Any]) -> dict[str, Any]:
+    """A stored (kg/cm) measurement row for the API: the metric fields plus their lb/in equivalents."""
+    out = dict(row)
     for src, dst, factor in (("weight_kg", "weight_lb", LB_PER_KG), ("height_cm", "height_in", 1 / CM_PER_IN),
                              ("head_cm", "head_in", 1 / CM_PER_IN)):
         out[dst] = round(row[src] * factor, 2) if row.get(src) is not None else None
     return out
 
 
+async def _set_growth_unit(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
+    """Change the unit system growth measurements are entered and shown in (stored data is unaffected)."""
+    entry = _entry(hass, call)
+    unit = call.data[CONF_GROWTH_UNIT]
+    if entry.data.get(CONF_GROWTH_UNIT, GROWTH_UNIT_DEFAULT) != unit:
+        hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_GROWTH_UNIT: unit})
+        # Reload so the sensors and the panel pick up the new unit
+        hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+    return {"growth_unit": unit}
+
+
 async def _list_measurements(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
     rt = _runtime(hass, call)
     rows = await _db(hass, rt.db.measurements)
-    return {"measurements": [_imperial(r) for r in rows]}
+    return {"measurements": [_with_units(r) for r in rows]}
 
 
 async def _delete_measurement(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
@@ -589,6 +615,7 @@ SERVICES: dict[str, tuple[Handler, vol.Schema]] = {
     "delete_diaper": (_delete_diaper, ID_REQUIRED_SCHEMA),
     "log_measurement": (_log_measurement, MEASUREMENT_SCHEMA),
     "delete_measurement": (_delete_measurement, ID_REQUIRED_SCHEMA),
+    "set_growth_unit": (_set_growth_unit, GROWTH_UNIT_SCHEMA),
     "mark_milestone": (_mark_milestone, MILESTONE_SCHEMA),
     "unmark_milestone": (_unmark_milestone, MILESTONE_ID_SCHEMA),
 }
@@ -641,7 +668,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         # Baby details in every response (for blueprints and notifications)
                         e = _entry(hass, call)
                         r = {**r, "baby": e.entry_id, "name": e.data[CONF_BABY_NAME],
-                             "unit": e.data.get(CONF_UNIT, "oz")}
+                             "unit": e.data.get(CONF_UNIT, "oz"),
+                             "growth_unit": e.data.get(CONF_GROWTH_UNIT, GROWTH_UNIT_DEFAULT)}
                     return r
                 hass.services.async_register(
                     DOMAIN, name, _handler, schema=schema.extend({vol.Optional("baby"): cv.string}),

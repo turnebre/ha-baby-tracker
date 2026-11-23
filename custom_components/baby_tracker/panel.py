@@ -13,7 +13,7 @@ from homeassistant.helpers import entity_registry as er
 
 from .const import (
     POOP_COLOR_DEFAULT, CONF_POOP_COLOR, CONF_POOP_CONSISTENCY, CONF_BIRTH_DATE, CONF_BABY_NAME,
-    CONF_SEX, CONF_UNIT, POOP_CONSISTENCY_DEFAULT, DOMAIN, PROJECT_NAME,
+    CONF_GROWTH_UNIT, CONF_SEX, CONF_UNIT, GROWTH_UNIT_DEFAULT, POOP_CONSISTENCY_DEFAULT, DOMAIN, PROJECT_NAME,
 )
 
 PANEL_URL = "baby-tracker"
@@ -47,6 +47,7 @@ def _config_baby(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         "birth": d[CONF_BIRTH_DATE],
         "sex": d.get(CONF_SEX, "unspecified"),
         "unit": d.get(CONF_UNIT, "oz"),
+        "growth_unit": d.get(CONF_GROWTH_UNIT, GROWTH_UNIT_DEFAULT),
         "poop_color": d.get(CONF_POOP_COLOR, POOP_COLOR_DEFAULT),
         "poop_consistency": d.get(CONF_POOP_CONSISTENCY, POOP_CONSISTENCY_DEFAULT),
         "entities": {

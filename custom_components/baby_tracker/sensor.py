@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -252,16 +252,37 @@ SENSORS: tuple[BabySensorDescription, ...] = (
     BabySensorDescription(
         key="age", translation_key="age", icon="mdi:cake-variant",
         native_unit_of_measurement=UnitOfTime.DAYS, value=lambda d: d["age_days"],
-        attributes=lambda d: {"name": d["name"], "birth": d["birth"], "sex": d["sex"], "unit": d["unit"]},
+        attributes=lambda d: {"name": d["name"], "birth": d["birth"], "sex": d["sex"], "unit": d["unit"],
+                                      "growth_unit": d["growth_unit"]},
     ),
 )
+
+
+# Growth sensors in kg/cm for babies whose growth unit is metric (the database already stores kg/cm)
+METRIC_GROWTH: dict[str, dict[str, Any]] = {
+    "weight": {
+        "native_unit_of_measurement": UnitOfMass.KILOGRAMS, "suggested_display_precision": 2,
+        "value": lambda d: round(d["weight"]["weight_kg"], 3) if d["weight"] else None,
+    },
+    "height": {
+        "native_unit_of_measurement": UnitOfLength.CENTIMETERS, "suggested_display_precision": 1,
+        "value": lambda d: round(d["height"]["height_cm"], 1) if d["height"] else None,
+    },
+}
+
+
+def _metric(desc: BabySensorDescription) -> BabySensorDescription:
+    return replace(desc, **METRIC_GROWTH[desc.key]) if desc.key in METRIC_GROWTH else desc
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     coordinator = entry.runtime_data.coordinator
-    async_add_entities(BabySensor(coordinator, entry, desc) for desc in SENSORS)
+    metric = coordinator.data["growth_unit"] == "metric"
+    async_add_entities(
+        BabySensor(coordinator, entry, _metric(desc) if metric else desc) for desc in SENSORS
+    )
 
 
 # Sensors that carry baby_id / name / unit (the ones the blueprints use)
