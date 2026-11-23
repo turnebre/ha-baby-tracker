@@ -173,6 +173,7 @@ class BabyPanel extends HTMLElement {
       this.shadowRoot.querySelectorAll("#selector-baby button").forEach((x) => x.classList.toggle("active", x.dataset.baby === b.entry_id));
       this._updateAge();
       this._paint();
+      this._syncGrowthUnit();
     }
   }
 
@@ -192,13 +193,58 @@ class BabyPanel extends HTMLElement {
   }
 
   // The growth unit can change from another client or from Configure without the panel being re-registered (that would
-  // discard unsaved forms), so follow the age sensor, which carries it
+  // discard unsaved forms), so the registered config is only a starting point. The backend is the source of truth:
+  // ask it when the panel mounts and when a baby is chosen (it works even if the age sensor is disabled), and follow
+  // the age sensor, which also carries the unit, for changes made while the panel is open.
+  async _syncGrowthUnit() {
+    const cfg = this._cfg;
+    try { this._applyGrowthUnit((await this._service("list_stashes", {}, true)).growth_unit, cfg); }
+    catch (e) { /* the age sensor still keeps the unit in sync */ }
+  }
+
   _followGrowthUnit() {
-    const a = this._st("age"), u = a && a.attributes && a.attributes.growth_unit;
-    if (!u || u === GROWTH || (u !== "metric" && u !== "imperial")) return;
-    GROWTH = u; this._cfg.growth_unit = u;
-    // Tabs that show growth values repaint (not Settings, which may hold unsaved feeding settings)
-    if (this._tab === "today" || this._tab === "measurements") this._paint();
+    const a = this._st("age");
+    this._applyGrowthUnit(a && a.attributes && a.attributes.growth_unit);
+  }
+
+  _applyGrowthUnit(u, cfg = this._cfg) {
+    if (u !== "metric" && u !== "imperial") return;
+    cfg.growth_unit = u;
+    if (cfg !== this._cfg || u === GROWTH) return;
+    const from = GROWTH;
+    // Nothing the user is typing is thrown away: the Growth draft is converted, Settings is only touched in place
+    const draft = this._tab === "measurements" ? this._measurementDraft(from, u) : null;
+    GROWTH = u;
+    if (this._tab === "today") this._paintSummary();
+    if (this._tab === "measurements") { this._paint(); this._restoreMeasurementDraft(draft); }
+    if (this._tab === "settings") {
+      const sel = this.shadowRoot.querySelector("#form-units select");
+      if (sel && sel.value === from) sel.value = u; // leave it alone if the user already picked something else
+    }
+  }
+
+  _measurementDraft(from, to) {
+    const f = this.shadowRoot.getElementById("form-measurement"); if (!f) return null;
+    const metric = from === "metric";
+    const conv = (v, weight) => {
+      const x = parseFloat(v); if (isNaN(x)) return "";
+      const r = weight ? (metric ? x * 2.20462262 : x / 2.20462262) : (metric ? x / 2.54 : x * 2.54);
+      const k = weight ? 100 : 10;
+      return String(Math.round(r * k) / k);
+    };
+    return {
+      date: f.date.value, note: f.note.value,
+      w: conv(f[metric ? "weight_kg" : "weight_lb"].value, true),
+      l: conv(f[metric ? "height_cm" : "height_in"].value, false),
+      h: conv(f[metric ? "head_cm" : "head_in"].value, false),
+    };
+  }
+
+  _restoreMeasurementDraft(d) {
+    const f = this.shadowRoot.getElementById("form-measurement"); if (!f || !d) return;
+    const g = G();
+    f.date.value = d.date; f.note.value = d.note;
+    f[g.wKey].value = d.w; f[g.lKey].value = d.l; f[g.hKey].value = d.h;
   }
 
   connectedCallback() { this._timer = setInterval(() => this._tab === "today" && this._paintSummary(), 30000); }
@@ -275,6 +321,7 @@ class BabyPanel extends HTMLElement {
       }, "baby_tracker_feeding_logged");
     } catch (e) { /* no subscription: refreshed when switching tabs */ }
     this._paint();
+    this._syncGrowthUnit();
   }
 
   _paint() {
