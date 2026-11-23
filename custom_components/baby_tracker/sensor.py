@@ -120,13 +120,14 @@ SENSORS: tuple[BabySensorDescription, ...] = (
         key="weight", translation_key="weight", device_class=SensorDeviceClass.WEIGHT,
         native_unit_of_measurement=UnitOfMass.KILOGRAMS, suggested_display_precision=2,
         value=lambda d: round(d["weight"]["weight_kg"], 4) if d["weight"] else None,
-        attributes=lambda d: {"date": d["weight"]["date"]} if d["weight"] else {},
+        # Canonical value for the panel: the sensor's own unit can be changed by the user in the entity settings
+        attributes=lambda d: {"date": d["weight"]["date"], "weight_kg": d["weight"]["weight_kg"]} if d["weight"] else {},
     ),
     BabySensorDescription(
         key="height", translation_key="height", device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UnitOfLength.CENTIMETERS, suggested_display_precision=1,
         value=lambda d: round(d["height"]["height_cm"], 2) if d["height"] else None,
-        attributes=lambda d: {"date": d["height"]["date"]} if d["height"] else {},
+        attributes=lambda d: {"date": d["height"]["date"], "height_cm": d["height"]["height_cm"]} if d["height"] else {},
     ),
     BabySensorDescription(
         key="bottle_remaining", translation_key="bottle_remaining", icon="mdi:baby-bottle",

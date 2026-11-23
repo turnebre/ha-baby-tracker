@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from pathlib import Path
 
@@ -60,6 +61,12 @@ def _config_baby(hass: HomeAssistant, entry: ConfigEntry) -> dict:
 async def async_update_panel(hass: HomeAssistant) -> None:
     """(Re)registers the panel with all loaded babies; removes it if none are left."""
     data = hass.data.setdefault(DOMAIN, {})
+    # Babies load and unload concurrently: two registrations of the same URL would make HA reject the second
+    async with data.setdefault("panel_lock", asyncio.Lock()):
+        await _update_panel(hass, data)
+
+
+async def _update_panel(hass: HomeAssistant, data: dict) -> None:
     babies: dict[str, ConfigEntry] = data.setdefault("babies", {})
     if PANEL_URL in hass.data.get(getattr(frontend, "DATA_PANELS", "frontend_panels"), {}):
         frontend.async_remove_panel(hass, PANEL_URL)

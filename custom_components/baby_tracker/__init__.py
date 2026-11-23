@@ -576,10 +576,10 @@ async def _set_growth_unit(hass: HomeAssistant, call: ServiceCall) -> ServiceRes
     unit = call.data[CONF_GROWTH_UNIT]
     if entry.data.get(CONF_GROWTH_UNIT, GROWTH_UNIT_DEFAULT) != unit:
         hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_GROWTH_UNIT: unit})
-        # No reload: the services stay available. Update the sensors' unit, the data and the panel in place
+        # No reload and no panel re-registration (open panels would be rebuilt and lose unsaved forms): the sensors'
+        # unit and the coordinator data change in place, and open panels follow the growth unit from the age sensor
         async_apply_growth_unit(hass, entry, unit)
         await entry.runtime_data.coordinator.async_refresh()
-        await async_update_panel(hass)
     return {"growth_unit": unit}
 
 

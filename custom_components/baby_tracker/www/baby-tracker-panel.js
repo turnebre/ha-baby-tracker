@@ -185,9 +185,20 @@ class BabyPanel extends HTMLElement {
     this._hass = h;
     if (this._menu) this._menu.hass = h;
     if (!this._ready) { this._ready = true; this._mount(); return; }
+    this._followGrowthUnit();
     this._updateAge();
     if (this._tab === "today") this._paintSummary();
     if (this._tab === "breast_milk") this._paintKpisBreastMilk();
+  }
+
+  // The growth unit can change from another client or from Configure without the panel being re-registered (that would
+  // discard unsaved forms), so follow the age sensor, which carries it
+  _followGrowthUnit() {
+    const a = this._st("age"), u = a && a.attributes && a.attributes.growth_unit;
+    if (!u || u === GROWTH || (u !== "metric" && u !== "imperial")) return;
+    GROWTH = u; this._cfg.growth_unit = u;
+    // Tabs that show growth values repaint (not Settings, which may hold unsaved feeding settings)
+    if (this._tab === "today" || this._tab === "measurements") this._paint();
   }
 
   connectedCallback() { this._timer = setInterval(() => this._tab === "today" && this._paintSummary(), 30000); }
@@ -199,13 +210,13 @@ class BabyPanel extends HTMLElement {
   // ---------- utilities ----------
   _st(key) { const id = this._cfg.entities[key]; return id ? this._hass.states[id] : undefined; }
   _val(key) { const s = this._st(key); return s && !["unknown", "unavailable"].includes(s.state) ? s.state : null; }
-  // Latest weight/length from its sensor, converted to the baby's growth unit whatever unit the sensor reports in
+  // Latest weight/length in the baby's growth unit, from the canonical kg/cm attribute (the sensor's own unit can be
+  // anything the user picked in the entity settings)
   _growth(key) {
-    const v = this._num(key); if (v === null) return null;
-    const from = (this._st(key).attributes || {}).unit_of_measurement;
-    const to = key === "weight" ? G().w : G().l;
-    const F = { "lb>kg": 1 / 2.20462262, "kg>lb": 2.20462262, "in>cm": 2.54, "cm>in": 1 / 2.54 };
-    return from && from !== to ? v * (F[`${from}>${to}`] ?? 1) : v;
+    const s = this._st(key), a = s && s.attributes;
+    const v = a ? a[key === "weight" ? "weight_kg" : "height_cm"] : undefined;
+    if (v === undefined || v === null) return null;
+    return GROWTH === "metric" ? v : key === "weight" ? v * 2.20462262 : v / 2.54;
   }
 
   _num(key) { const v = this._val(key); return v === null ? null : Number(v); }

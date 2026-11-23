@@ -11,7 +11,8 @@ While the version is 0.x, minor versions may contain breaking changes.
 - `log_measurement` also accepts `weight_kg`, `height_cm` and `head_cm` (use either set per measurement), and `list_measurements`
   returns both the metric and imperial fields.
 - The weight and length sensors now report kg/cm natively and are shown in the baby's growth unit through the entity registry.
-  A unit you picked yourself in the sensor's settings (other than lb/kg and in/cm) is left alone.
+  A unit you picked yourself in the sensor's settings (other than lb/kg and in/cm) is left alone. The sensors also expose the
+  exact `weight_kg` / `height_cm` as attributes.
 - The `measurement` event now carries both the lb/in and kg/cm fields.
 
 ## [2.0.0] - English-only fork
