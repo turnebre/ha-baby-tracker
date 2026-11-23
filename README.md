@@ -30,10 +30,9 @@ Everything is stored **locally** in your Home Assistant (SQLite). No cloud, no a
 - **Charts** by day, week or month: amount per day (formula vs breast milk), feedings, amount per feeding, bottles,
   % finished, wasted formula, pumped milk, diapers, and *when* the baby eats / needs a change.
 - **Pediatrician's plan** — a daily goal in oz, the daytime feeding interval and a bedtime/wake-up window. Nothing is expected overnight; the per-feeding amounts, the "expected by now" curve and the reminder follow it.
-- **Growth** — weight (lb), length (in) and head circumference (in) history.
-- **Milestones** — first year, week by week: CDC milestones grouped into skills, tick them when you notice them and see progress by skill and area. A guide, not a test or a deadline.
+- **Growth** — weight, length and head circumference history, in lb/in or kg/cm (your choice).
 - **Several babies** (twins!) — one entry per baby, a selector in the panel.
-- **oz or ml** units.
+- **oz or ml** units for feedings, and **imperial or metric** units for growth.
 - **Blueprints** for buttons, reminders, milk expiry, notification actions and voice.
 
 ## Installation
@@ -49,7 +48,7 @@ Copy `custom_components/baby_tracker` into your `config/custom_components/` fold
 ## Configuration
 
 When adding a baby you set the **name, date of birth, usual bottle size and main milk type**.
-Later, **Configure** lets you change name, date of birth, sex, **unit (oz/ml)** and the **usual poop color/consistency**.
+Later, **Configure** lets you change name, date of birth, sex, **unit (oz/ml)**, **growth units (lb/in or kg/cm)** and the **usual poop color/consistency**. The growth units can also be changed from the panel's **Settings** tab.
 The **Settings** tab in the panel holds the pediatrician's plan (daily goal, daytime interval, bedtime and wake-up) and milk limits.
 
 > The internal domain is `baby_tracker` (entities and actions use it, e.g. `baby_tracker.log_feeding`).
@@ -64,7 +63,6 @@ A **Baby Tracker** entry appears in the sidebar (and in the companion app):
 | **Feedings** | Day view grouped by bottle; edit, delete, move feedings; diapers of the day |
 | **Breast milk** | Stash with expiry, save milk, log pumping sessions |
 | **Growth** | Weight / length / head circumference and their charts |
-| **Milestones** | Week-by-week first year: milestones to tick, what is normal, ideas, progress by skill |
 | **Charts** | Day / week / month charts |
 | **Settings** | Bottle size, pediatrician's plan, milk limits, hints from the last 7 days |
 
@@ -108,10 +106,11 @@ All actions accept an optional `baby` field (entry id or baby name) — required
 | `baby_tracker.save_milk` · `baby_tracker.use_stash` · `baby_tracker.move_stash` · `baby_tracker.discard_stash` | Breast milk stash |
 | `baby_tracker.log_pumping` · `baby_tracker.delete_pumping` | Pumping sessions |
 | `baby_tracker.log_diaper` · `baby_tracker.correct_diaper` · `baby_tracker.delete_diaper` | Diapers |
-| `baby_tracker.log_measurement` · `baby_tracker.delete_measurement` | Growth measurements |
+| `baby_tracker.log_measurement` · `baby_tracker.delete_measurement` | Growth measurements (`log_measurement` takes `weight_lb`/`height_in`/`head_in` or `weight_kg`/`height_cm`/`head_cm`) |
+| `baby_tracker.set_growth_unit` | Choose imperial (lb, in) or metric (kg, cm) for entering and showing growth measurements |
 | `baby_tracker.list_*` | Read data (return a response) |
 
-Every response includes `baby`, `name` and `unit`, handy for your own notifications.
+Every response includes `baby`, `name`, `unit` and `growth_unit`, handy for your own notifications.
 
 ## Sensors
 

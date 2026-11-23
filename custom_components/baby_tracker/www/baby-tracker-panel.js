@@ -17,6 +17,11 @@ const U = () => UNIT;
 const isMl = () => UNIT === "ml";
 const toUnit = (oz) => (isMl() ? oz * ML_PER_OZ : oz);
 const toOz = (v) => (isMl() ? v / ML_PER_OZ : v);
+// Growth unit system (Configure or Settings): the database always stores kg/cm
+let GROWTH = "imperial";
+const G = () => (GROWTH === "metric"
+  ? { w: "kg", l: "cm", wKey: "weight_kg", lKey: "height_cm", hKey: "head_cm", wMin: 0.45, wMax: 30, lMin: 20.3, lMax: 129.5, hMin: 20.3, hMax: 61, wStep: 0.01 }
+  : { w: "lb", l: "in", wKey: "weight_lb", lKey: "height_in", hKey: "head_in", wMin: 0.99, wMax: 66.14, lMin: 8, lMax: 51, hMin: 8, hMax: 24, wStep: 0.01 });
 // Number in the unit (no suffix) and amount with suffix
 const amountN = (oz, d = 2) => (oz === null || oz === undefined || oz === "" || isNaN(oz)) ? "—"
   : isMl() ? String(Math.round(oz * ML_PER_OZ)) : num(oz, d);
@@ -138,37 +143,6 @@ function line({ dots, unit, height = 170 }) {
   return svg + "</svg>";
 }
 
-// ---------- Milestones: catalog in www/milestones.json ----------
-// Week in which each CDC checkpoint falls (most babies already do it by that age)
-const WEEK_CONTROL = [[0, 0], [2, 9], [4, 18], [6, 27], [9, 39], [12, 53]];
-const WEEK_END = 53;
-const toWeek = (p) => (p.months ? WEEK_CONTROL.find(([m]) => m === p.months)[1] : WEEK_END);
-const fromWeek = (p) => p.from_weeks ?? WEEK_CONTROL[WEEK_CONTROL.findIndex(([m]) => m === p.months) - 1][1];
-const COLOR_AREA = { social: "var(--breast_milk-color, #e91e63)", communication: "var(--info-color, #039be5)",
-  exploring: "var(--warning-color, #ff9800)", movement: "var(--success-color, #43a047)" };
-const STROKE_AREA = { social: "", communication: "6 3", exploring: "2 3", movement: "10 3 2 3" };
-
-// Curve per area: cumulative marked milestones by age in weeks, up to the current week
-function curveAreas(series, weekToday) {
-  const W = 640, H = 200, left = 30, below = 24, above = 10;
-  const maxY = Math.max(1, ...series.map((s) => s.weeks.length));
-  const X = (w) => left + (W - left - 10) * w / WEEK_END;
-  const Y = (v) => above + (H - above - below) * (1 - v / maxY);
-  let svg = `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="${esc(t("Milestones marked by area, by age"))}">`;
-  new Set([0, 1, 2, 3].map((k) => Math.round(maxY * k / 3))).forEach((v) => {
-    svg += `<line x1="${left}" x2="${W - 4}" y1="${Y(v)}" y2="${Y(v)}" class="grid"/><text x="${left - 4}" y="${Y(v) + 3}" class="axis" text-anchor="end">${v}</text>`;
-  });
-  WEEK_CONTROL.forEach(([m, w]) => { svg += `<text x="${X(w)}" y="${H - 8}" class="axis" text-anchor="middle">${m}${t("m")}</text>`; });
-  const endWeek = Math.min(weekToday, WEEK_END);
-  series.forEach((s) => {
-    let n = 0, d = `M${X(0)} ${Y(0)}`;
-    s.weeks.slice().sort((a, b) => a - b).forEach((w) => { n += 1; d += ` H${X(w)} V${Y(n)}`; });
-    d += ` H${X(endWeek)}`;
-    svg += `<path d="${d}" fill="none" stroke="${COLOR_AREA[s.id]}" stroke-width="2.5" stroke-dasharray="${STROKE_AREA[s.id]}"><title>${esc(s.name)}: ${n}</title></path>`;
-  });
-  return svg + "</svg>";
-}
-
 class BabyPanel extends HTMLElement {
   constructor() {
     super();
@@ -192,12 +166,14 @@ class BabyPanel extends HTMLElement {
   _chooseBaby(b, repaint = true) {
     this._cfg = b;
     UNIT = b.unit === "ml" ? "ml" : "oz";
+    GROWTH = b.growth_unit === "metric" ? "metric" : "imperial";
     try { localStorage.setItem("baby_tracker_baby", b.entry_id); } catch (e) { /* no storage available */ }
     if (repaint && this._ready) {
       const n = this.shadowRoot.getElementById("title-name"); if (n) n.textContent = b.name;
       this.shadowRoot.querySelectorAll("#selector-baby button").forEach((x) => x.classList.toggle("active", x.dataset.baby === b.entry_id));
       this._updateAge();
       this._paint();
+      this._syncGrowthUnit();
     }
   }
 
@@ -210,20 +186,93 @@ class BabyPanel extends HTMLElement {
     this._hass = h;
     if (this._menu) this._menu.hass = h;
     if (!this._ready) { this._ready = true; this._mount(); return; }
+    this._followGrowthUnit();
     this._updateAge();
     if (this._tab === "today") this._paintSummary();
     if (this._tab === "breast_milk") this._paintKpisBreastMilk();
   }
 
-  connectedCallback() { this._timer = setInterval(() => this._tab === "today" && this._paintSummary(), 30000); }
+  // The growth unit can change from another client or from Configure without the panel being re-registered (that would
+  // discard unsaved forms), so the registered config is only a starting point. The backend is the source of truth:
+  // ask it when the panel mounts and when a baby is chosen (it works even if the age sensor is disabled), and follow
+  // the age sensor, which also carries the unit, for changes made while the panel is open.
+  async _syncGrowthUnit() {
+    const cfg = this._cfg;
+    try { this._applyGrowthUnit((await this._service("list_stashes", {}, true)).growth_unit, cfg); }
+    catch (e) { /* the age sensor still keeps the unit in sync */ }
+  }
+
+  _followGrowthUnit() {
+    const a = this._st("age");
+    this._applyGrowthUnit(a && a.attributes && a.attributes.growth_unit);
+  }
+
+  _applyGrowthUnit(u, cfg = this._cfg) {
+    if (u !== "metric" && u !== "imperial") return;
+    cfg.growth_unit = u;
+    if (cfg !== this._cfg || u === GROWTH) return;
+    const from = GROWTH;
+    // Nothing the user is typing is thrown away: the Growth draft is converted, Settings is only touched in place
+    const draft = this._tab === "measurements" ? this._measurementDraft(from, u) : null;
+    GROWTH = u;
+    if (this._tab === "today") this._paintSummary();
+    if (this._tab === "measurements") { this._paint(); this._restoreMeasurementDraft(draft); }
+    if (this._tab === "settings") {
+      const sel = this.shadowRoot.querySelector("#form-units select");
+      if (sel && sel.value === from) sel.value = u; // leave it alone if the user already picked something else
+    }
+  }
+
+  _measurementDraft(from, to) {
+    const f = this.shadowRoot.getElementById("form-measurement"); if (!f) return null;
+    const metric = from === "metric";
+    const conv = (v, weight) => {
+      const x = parseFloat(v); if (isNaN(x)) return "";
+      const r = weight ? (metric ? x * 2.20462262 : x / 2.20462262) : (metric ? x / 2.54 : x * 2.54);
+      const k = weight ? 100 : 10;
+      return String(Math.round(r * k) / k);
+    };
+    return {
+      date: f.date.value, note: f.note.value,
+      w: conv(f[metric ? "weight_kg" : "weight_lb"].value, true),
+      l: conv(f[metric ? "height_cm" : "height_in"].value, false),
+      h: conv(f[metric ? "head_cm" : "head_in"].value, false),
+    };
+  }
+
+  _restoreMeasurementDraft(d) {
+    const f = this.shadowRoot.getElementById("form-measurement"); if (!f || !d) return;
+    const g = G();
+    f.date.value = d.date; f.note.value = d.note;
+    f[g.wKey].value = d.w; f[g.lKey].value = d.l; f[g.hKey].value = d.h;
+  }
+
+  connectedCallback() {
+    this._timer = setInterval(() => {
+      if (this._tab === "today") this._paintSummary();
+      // Without the unit-change event (Home Assistant only lets admins subscribe to custom events) ask the backend
+      if (this._ready && !this._unsubUnit) this._syncGrowthUnit();
+    }, 30000);
+  }
   disconnectedCallback() {
     clearInterval(this._timer);
     if (this._unsub) { this._unsub(); this._unsub = null; }
+    if (this._unsubUnit) { this._unsubUnit(); this._unsubUnit = null; }
+    if (this._conn && this._onReady) { this._conn.removeEventListener("ready", this._onReady); this._conn = null; }
   }
 
   // ---------- utilities ----------
   _st(key) { const id = this._cfg.entities[key]; return id ? this._hass.states[id] : undefined; }
   _val(key) { const s = this._st(key); return s && !["unknown", "unavailable"].includes(s.state) ? s.state : null; }
+  // Latest weight/length in the baby's growth unit, from the canonical kg/cm attribute (the sensor's own unit can be
+  // anything the user picked in the entity settings)
+  _growth(key) {
+    const s = this._st(key), a = s && s.attributes;
+    const v = a ? a[key === "weight" ? "weight_kg" : "height_cm"] : undefined;
+    if (v === undefined || v === null) return null;
+    return GROWTH === "metric" ? v : key === "weight" ? v * 2.20462262 : v / 2.54;
+  }
+
   _num(key) { const v = this._val(key); return v === null ? null : Number(v); }
 
   async _service(service, data, answer = false) {
@@ -253,7 +302,7 @@ class BabyPanel extends HTMLElement {
       ${this._babies.length > 1 ? `<div class="selector-baby" id="selector-baby">${this._babies.map((b) =>
         `<button data-baby="${b.entry_id}" class="${b.entry_id === this._cfg.entry_id ? "active" : ""}">${esc(b.name)}</button>`).join("")}</div>` : ""}
       <nav class="tabs">
-        ${[["today", "Today"], ["feedings", "Feedings"], ["breast_milk", "Breast milk"], ["measurements", "Growth"], ["milestones", "Milestones"], ["charts", "Charts"], ["settings", "Settings"]]
+        ${[["today", "Today"], ["feedings", "Feedings"], ["breast_milk", "Breast milk"], ["measurements", "Growth"], ["charts", "Charts"], ["settings", "Settings"]]
           .map(([k, e]) => `<button data-tab="${k}" class="${k === this._tab ? "active" : ""}">${t(e)}</button>`).join("")}
       </nav>
       <main id="content"></main>
@@ -271,6 +320,7 @@ class BabyPanel extends HTMLElement {
       this._tab = b.dataset.tab;
       this.shadowRoot.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
       this._paint();
+      if (!this._unsubUnit) this._syncGrowthUnit();
     });
     try {
       this._unsub = await this._hass.connection.subscribeEvents(() => {
@@ -279,7 +329,20 @@ class BabyPanel extends HTMLElement {
         if (this._tab === "charts") this._paintCharts();
       }, "baby_tracker_feeding_logged");
     } catch (e) { /* no subscription: refreshed when switching tabs */ }
+    try {
+      this._unsubUnit = await this._hass.connection.subscribeEvents((ev) => {
+        const cfg = this._babies.find((b) => b.entry_id === ev.data.baby);
+        if (cfg) this._applyGrowthUnit(ev.data.growth_unit, cfg);
+      }, "baby_tracker_growth_unit_changed");
+    } catch (e) { this._unsubUnit = null; /* not allowed for this user: the panel asks the backend periodically and on tab changes */ }
+    // Events missed while the connection was down are not replayed: ask the backend again whenever it reconnects
+    try {
+      this._conn = this._hass.connection;
+      this._onReady = () => this._syncGrowthUnit();
+      this._conn.addEventListener("ready", this._onReady);
+    } catch (e) { this._conn = null; /* the periodic lookup and the age sensor still cover it */ }
     this._paint();
+    this._syncGrowthUnit();
   }
 
   _paint() {
@@ -289,7 +352,6 @@ class BabyPanel extends HTMLElement {
     if (this._tab === "feedings") { c.innerHTML = `<div id="feedings"></div>`; this._loadFeedings(); }
     if (this._tab === "breast_milk") { c.innerHTML = this._htmlBreastMilk(); this._bindBreastMilk(); this._loadBreastMilk(); }
     if (this._tab === "measurements") { c.innerHTML = this._htmlMeasurements(); this._bindMeasurements(); this._loadMeasurements(); }
-    if (this._tab === "milestones") { c.innerHTML = `<div id="milestones"></div>`; this._loadMilestones(); }
     if (this._tab === "charts") { c.innerHTML = this._htmlCharts(); this._bindCharts(); this._paintCharts(); }
   }
 
@@ -432,7 +494,7 @@ class BabyPanel extends HTMLElement {
       <div class="kpi"><div class="label">${t("Bottles finished (7 d)")}</div><div class="num">${pct === null ? "—" : `${pct}<small>%</small>`}</div>
         <div class="sub">${t("wasted")} ${amount(this._num("wasted_7d"), 1)}</div></div>
       <div class="kpi"><div class="label">${t("Age")}</div><div class="num sm">${ageText(this._val("age"))}</div></div>
-      <div class="kpi"><div class="label">${t("Weight · Length")}</div><div class="num sm">${num(this._num("weight"), 2)} lb · ${num(this._num("height"), 1)} in</div></div>`;
+      <div class="kpi"><div class="label">${t("Weight · Length")}</div><div class="num sm">${num(this._growth("weight"), 2)} ${G().w} · ${num(this._growth("height"), 1)} ${G().l}</div></div>`;
   }
 
   // Progress of the day against two goals: minimum and ideal (the smaller and larger of the pediatrician's and the weight-based one)
@@ -873,6 +935,18 @@ class BabyPanel extends HTMLElement {
         <p class="sub" id="planned"></p>
         <button class="primary" id="save-settings">${t("Save settings")}</button>
       </section>
+      <section class="card">
+        <h2>${t("Units")}</h2>
+        <form class="form" id="form-units" onsubmit="return false">
+          <label>${t("Growth units")}
+            <select name="growth_unit">
+              <option value="imperial"${GROWTH === "imperial" ? " selected" : ""}>${t("Imperial (lb, in)")}</option>
+              <option value="metric"${GROWTH === "metric" ? " selected" : ""}>${t("Metric (kg, cm)")}</option>
+            </select>
+            <span class="help">${t("How weight, length and head circumference are entered and shown. Saved measurements are not changed.")}</span></label>
+        </form>
+        <button class="primary" id="save-units">${t("Save units")}</button>
+      </section>
       <section class="card"><h2>${t("What the last 7 days say")}</h2><div id="suggestion" class="sub"></div></section>`;
   }
 
@@ -913,6 +987,16 @@ class BabyPanel extends HTMLElement {
           await this._hass.callService("time", "set_value", { entity_id: this._cfg.entities[k], time: `${f[k].value}:00` });
         }
       }, t("Settings saved"));
+    };
+    this.shadowRoot.getElementById("save-units").onclick = async () => {
+      const unit = this.shadowRoot.getElementById("form-units").growth_unit.value;
+      // The baby the save belongs to: the user may switch babies while the request is running
+      const cfg = this._cfg;
+      if (unit === (cfg.growth_unit || "imperial")) { this._notice(t("No changes")); return; }
+      await this._action(() => this._service("set_growth_unit", { growth_unit: unit }), t("Units saved"));
+      cfg.growth_unit = unit;
+      if (this._cfg === cfg) GROWTH = unit;
+      // No repaint: the other tabs repaint when opened, and this one may hold unsaved feeding settings
     };
     this._paintSuggestion();
   }
@@ -1133,20 +1217,21 @@ class BabyPanel extends HTMLElement {
 
   // ---------- Measurements ----------
   _htmlMeasurements() {
+    const g = G();
     return `
       <section class="card">
         <h2>${t("New measurement")}</h2>
         <form class="form" id="form-measurement" onsubmit="return false">
           <label class="complete">${t("Date")}<input type="datetime-local" name="date" value="${toInputLocal(new Date())}"></label>
-          <label>${t("Weight (lb)")}<input type="number" name="weight_lb" step="0.01" min="1" max="66" inputmode="decimal"></label>
-          <label>${t("Length (in)")}<input type="number" name="height_in" step="0.1" min="8" max="51" inputmode="decimal"></label>
-          <label>${t("Head circumference (in)")}<input type="number" name="head_in" step="0.1" min="8" max="24" inputmode="decimal"></label>
+          <label>${t("Weight ({u})", { u: g.w })}<input type="number" name="${g.wKey}" step="${g.wStep}" min="${g.wMin}" max="${g.wMax}" inputmode="decimal"></label>
+          <label>${t("Length ({u})", { u: g.l })}<input type="number" name="${g.lKey}" step="0.1" min="${g.lMin}" max="${g.lMax}" inputmode="decimal"></label>
+          <label>${t("Head circumference ({u})", { u: g.l })}<input type="number" name="${g.hKey}" step="0.1" min="${g.hMin}" max="${g.hMax}" inputmode="decimal"></label>
           <label>${t("Note")}<input type="text" name="note" placeholder="${t("e.g. pediatrician visit")}"></label>
         </form>
         <button class="primary" id="save-measurement">${t("Save measurement")}</button>
       </section>
-      <section class="card"><h2>${t("Weight (lb) by age")}</h2><div id="g-weight"></div></section>
-      <section class="card"><h2>${t("Length (in) by age")}</h2><div id="g-height"></div></section>
+      <section class="card"><h2>${t("Weight ({u}) by age", { u: g.w })}</h2><div id="g-weight"></div></section>
+      <section class="card"><h2>${t("Length ({u}) by age", { u: g.l })}</h2><div id="g-height"></div></section>
       <section class="card"><h2>${t("History")}</h2><div id="list-measurements"></div></section>`;
   }
 
@@ -1155,9 +1240,10 @@ class BabyPanel extends HTMLElement {
     r.getElementById("save-measurement").onclick = async () => {
       const f = r.getElementById("form-measurement");
       const d = { date: toServiceDate(f.date.value) };
-      ["weight_lb", "height_in", "head_in"].forEach((k) => { if (f[k].value !== "") d[k] = parseFloat(f[k].value); });
+      const g = G();
+      [g.wKey, g.lKey, g.hKey].forEach((k) => { if (f[k].value !== "") d[k] = parseFloat(f[k].value); });
       if (f.note.value.trim()) d.note = f.note.value.trim();
-      if (!d.weight_lb && !d.height_in && !d.head_in) { this._notice(t("Enter at least weight, length or head circumference")); return; }
+      if (!d[g.wKey] && !d[g.lKey] && !d[g.hKey]) { this._notice(t("Enter at least weight, length or head circumference")); return; }
       await this._action(() => this._service("log_measurement", d, true), t("Measurement saved"));
       f.reset(); f.date.value = toInputLocal(new Date());
       this._loadMeasurements();
@@ -1169,17 +1255,18 @@ class BabyPanel extends HTMLElement {
     catch (e) { this._notice(`${t("Error")}: ${e.message}`); return; }
     const birth = new Date(this._cfg.birth + "T00:00");
     const age = (iso) => Math.max(0, Math.round((startOfDay(new Date(iso)) - birth) / 86400000));
+    const g = G();
     const pts = (field) => this._measurements.filter((m) => m[field] != null).map((m) => ({ x: age(m.date), y: m[field] }));
     const r = this.shadowRoot;
-    r.getElementById("g-weight").innerHTML = line({ dots: pts("weight_lb"), unit: "lb" });
-    r.getElementById("g-height").innerHTML = line({ dots: pts("height_in"), unit: "in" });
+    r.getElementById("g-weight").innerHTML = line({ dots: pts(g.wKey), unit: g.w });
+    r.getElementById("g-height").innerHTML = line({ dots: pts(g.lKey), unit: g.l });
     const list = r.getElementById("list-measurements");
     list.innerHTML = this._measurements.length ? `<ul class="list">${this._measurements.slice().reverse().map((m) => {
       const d = new Date(m.date);
       return `<li class="measurement">
         <span class="hhmm">${d.getDate()} ${MONTHS[d.getMonth()]}</span>
-        <span class="oz">${[m.weight_lb != null ? `${num(m.weight_lb, 2)} lb` : "", m.height_in != null ? `${num(m.height_in, 1)} in` : "",
-          m.head_in != null ? `${t("HC")} ${num(m.head_in, 1)}` : ""].filter(Boolean).join(" · ")}</span>
+        <span class="oz">${[m[g.wKey] != null ? `${num(m[g.wKey], 2)} ${g.w}` : "", m[g.lKey] != null ? `${num(m[g.lKey], 1)} ${g.l}` : "",
+          m[g.hKey] != null ? `${t("HC")} ${num(m[g.hKey], 1)}` : ""].filter(Boolean).join(" · ")}</span>
         <span class="goal-t">${t("{n} days", { n: age(m.date) })}${m.note ? ` · ${esc(m.note)}` : ""}</span>
         <button class="icon" data-delete="${m.id}" aria-label="${t("Delete")}">✕</button>
       </li>`;
@@ -1191,155 +1278,6 @@ class BabyPanel extends HTMLElement {
         this._loadMeasurements();
       };
     });
-  }
-
-  // ---------- Milestones ----------
-  _weekOf(date) {
-    const birth = new Date(this._cfg.birth + "T00:00");
-    return Math.floor(Math.round((startOfDay(date) - birth) / 86400000) / 7);
-  }
-
-  async _loadMilestones() {
-    try {
-      if (!this._catalog) this._catalog = await (await fetch("/baby_tracker_static/milestones.json")).json();
-      const list = (await this._service("list_milestones", {}, true)).milestones;
-      this._milestones = Object.fromEntries(list.map((h) => [h.milestone_id, h]));
-    } catch (e) { this._notice(`${t("Error loading")}: ${e.message}`); return; }
-    const today = Math.min(Math.max(this._weekOf(new Date()), 0), WEEK_END - 1);
-    if (this._hWeek === undefined || this._hBaby !== this._cfg.entry_id) this._hWeek = today;
-    this._hBaby = this._cfg.entry_id;
-    this._hOpenBottles = this._hOpenBottles || new Set();
-    this._paintMilestones();
-  }
-
-  _rowMilestone(p, skill) {
-    const h = this._milestones[p.id];
-    let goal = "";
-    if (h) {
-      const d = new Date(h.date + "T00:00");
-      const days = Math.round((d - new Date(this._cfg.birth + "T00:00")) / 86400000);
-      goal = `${t("Noticed on {d}", { d: `${d.getDate()} ${MONTHS[d.getMonth()]}` })} · ${ageText(days)}`
-        + (h.logged_by ? ` · ${esc(h.logged_by)}` : "") + (h.note ? ` · ${esc(h.note)}` : "");
-    } else {
-      goal = p.months ? t("Most babies by {n} months", { n: p.months }) : t("Optional");
-    }
-    return `<button class="hi-item ${h ? "made_at" : ""}" role="checkbox" aria-checked="${h ? "true" : "false"}" data-milestone="${p.id}" data-skill="${skill.id}">
-      <span class="hi-box" aria-hidden="true">${h ? "✓" : ""}</span>
-      <span class="hi-text"><span>${esc(p.text)}</span><span class="sub">${esc(skill.name)} · ${goal}</span></span></button>`;
-  }
-
-  _paintMilestones() {
-    const count = this.shadowRoot.getElementById("milestones"); if (!count) return;
-    const cat = this._catalog, w = this._hWeek, today = this._weekOf(new Date());
-    const stage = cat.stages.filter((e) => e.from_weeks <= w).pop();
-    const et = stage;
-    const weekStart = addDays(new Date(this._cfg.birth + "T00:00"), w * 7);
-    const weekEndDate = addDays(weekStart, 6);
-    const fmt = (d) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-    // What is due this week, and what has passed its reference age without being marked (no alarm)
-    const ofNow = {}, pending = [];
-    cat.skills.forEach((sk) => sk.steps.forEach((p) => {
-      const h = this._milestones[p.id];
-      const inWindow = fromWeek(p) <= w && w < toWeek(p);
-      const markedThis = h && this._weekOf(new Date(h.date + "T00:00")) === w;
-      if (inWindow || markedThis) (ofNow[sk.area] = ofNow[sk.area] || []).push(this._rowMilestone(p, sk));
-      else if (!h && toWeek(p) <= w && p.months) pending.push(this._rowMilestone(p, sk));
-    }));
-    const list = (items) => `<ul class="hi-list">${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
-    const pct = (v) => `${v / WEEK_END * 100}%`;
-    const series = Object.keys(cat.areas).map((id) => ({ id, name: cat.areas[id],
-      weeks: cat.skills.filter((k) => k.area === id).flatMap((k) => k.steps).filter((p) => this._milestones[p.id])
-        .map((p) => Math.max(0, this._weekOf(new Date(this._milestones[p.id].date + "T00:00")))) }));
-    const total = cat.skills.flatMap((k) => k.steps).length, done = Object.keys(this._milestones).length;
-    count.innerHTML = `
-      <div class="navday">
-        <button id="week-prev" aria-label="${t("Previous week")}" ${w <= 0 ? "disabled" : ""}>‹</button>
-        <div class="hi-week"><b>${t("Week {n}", { n: w })}</b><span class="sub">${fmt(weekStart)} – ${fmt(weekEndDate)}${w === today ? ` · ${t("this week")}` : ""}</span></div>
-        ${w !== today && today >= 0 && today < WEEK_END ? `<button class="chip" id="week-today">${t("Today")}</button>` : ""}
-        <button id="week-next" aria-label="${t("Next week")}" ${w >= WEEK_END - 1 ? "disabled" : ""}>›</button>
-      </div>
-      <section class="card">
-        <div class="sub">${t("Update in progress")}</div>
-        <h2>${esc(et.title)}</h2>
-        <p class="hi-p">${esc(et.summary)}</p>
-      </section>
-      <section class="card">
-        <h2>${t("May show up at this stage")}</h2>
-        ${Object.keys(cat.areas).filter((a) => ofNow[a]).map((a) => `<h3 class="hi-area">${esc(cat.areas[a])}</h3>${ofNow[a].join("")}`).join("")
-          || `<p class="empty">${t("No new milestones this week.")}</p>`}
-        ${pending.length ? `<details class="hi-pending"><summary>${t("Not marked yet from earlier stages ({n})", { n: pending.length })}</summary>
-          <p class="sub">${t("No worries: maybe it already happens and just isn't marked, or it will come at their own pace.")}</p>${pending.join("")}</details>` : ""}
-      </section>
-      <section class="card"><h2>${t("Normal at this stage")}</h2>${list(et.normal)}</section>
-      <section class="card"><h2>${t("Ideas for this stage")}</h2>${list(et.ideas)}</section>
-      <section class="card"><h2>${t("Next update")}</h2><p class="hi-p">${esc(et.next)}</p></section>
-      <section class="card">
-        <div class="row-title"><h2>${t("Progress by skill")}</h2><span class="sub">${t("{a} of {b}", { a: done, b: total })}</span></div>
-        <p class="sub">${t("The band is the reference period, each dot a marked milestone and the line today's age.")}</p>
-        <div class="hi-axis">${WEEK_CONTROL.map(([m, week]) => `<span style="left:${pct(week)}">${m}${t("m")}</span>`).join("")}</div>
-        ${Object.keys(cat.areas).map((a) => `<h3 class="hi-area">${esc(cat.areas[a])}</h3>` + cat.skills.filter((k) => k.area === a).map((k) => {
-          const marked = k.steps.filter((p) => this._milestones[p.id]);
-          const start0 = Math.min(...k.steps.map(fromWeek)), end0 = Math.max(...k.steps.map(toWeek));
-          return `<details class="hi-skill" data-skill="${k.id}" ${this._hOpenBottles.has(k.id) ? "open" : ""}>
-            <summary><span class="hi-skill-t"><span>${esc(k.name)}</span><span class="sub">${t("{a} of {b}", { a: marked.length, b: k.steps.length })}</span></span>
-              <span class="hi-hint">
-                <span class="hi-band" style="left:${pct(start0)};width:${pct(end0 - start0)}"></span>
-                ${today >= 0 && today <= WEEK_END ? `<span class="hi-today" style="left:${pct(today)}"></span>` : ""}
-                ${marked.map((p) => `<span class="hi-dot" title="${esc(p.text)}" style="left:${pct(Math.max(0, this._weekOf(new Date(this._milestones[p.id].date + "T00:00"))))}"></span>`).join("")}
-              </span></summary>
-            ${k.steps.map((p) => this._rowMilestone(p, k)).join("")}
-          </details>`;
-        }).join("")).join("")}
-      </section>
-      <section class="card">
-        <h2>${t("Milestones marked by area")}</h2>
-        ${done ? curveAreas(series, today) : `<p class="empty">${t("No data yet.")}</p>`}
-        <div class="hi-legend">${series.map((x) => `<span><svg width="26" height="8" aria-hidden="true"><line x1="0" x2="26" y1="4" y2="4" stroke="${COLOR_AREA[x.id]}" stroke-width="2.5" stroke-dasharray="${STROKE_AREA[x.id]}"/></svg>${esc(x.name)}: ${x.weeks.length}</span>`).join("")}</div>
-      </section>
-      <p class="sub hi-notice">${esc(cat.notice)}</p>
-      <p class="sub hi-notice">${t("Milestones and ages:")} <a href="${esc(cat.source.url)}" target="_blank" rel="noopener">${esc(cat.source.name)}</a>. ${t("Stages, tips and weeks are our own guide, not from the CDC.")}</p>`;
-    const r = this.shadowRoot;
-    const ir = (n) => { this._hWeek = n; this._paintMilestones(); };
-    r.getElementById("week-prev").onclick = () => ir(w - 1);
-    r.getElementById("week-next").onclick = () => ir(w + 1);
-    const bh = r.getElementById("week-today"); if (bh) bh.onclick = () => ir(today);
-    count.querySelectorAll(".hi-skill").forEach((d) => d.addEventListener("toggle", () => {
-      if (d.open) this._hOpenBottles.add(d.dataset.skill); else this._hOpenBottles.delete(d.dataset.skill);
-    }));
-    count.querySelectorAll("[data-milestone]").forEach((b) => { b.onclick = () => this._markMilestone(b.dataset.milestone); });
-  }
-
-  _markMilestone(id) {
-    const step = this._catalog.skills.flatMap((k) => k.steps).find((p) => p.id === id);
-    const h = this._milestones[id];
-    const today = startOfDay(new Date());
-    // In a past week, the suggested day is the last day of that week
-    const weekEnd = addDays(new Date(this._cfg.birth + "T00:00"), this._hWeek * 7 + 6);
-    const proposed = h ? h.date : dateISO(weekEnd < today ? weekEnd : today);
-    const { dlg, close } = this._modal(`
-      <h2>${esc(step.text)}</h2>
-      <form class="form" id="form-milestone" onsubmit="return false">
-        <label class="complete">${t("When did you notice it?")}<input type="date" name="date" value="${proposed}" min="${this._cfg.birth}" max="${dateISO(today)}"></label>
-        <label class="complete">${t("Note")}<input type="text" name="note" value="${esc(h ? h.note || "" : "")}" placeholder="${t("optional")}"></label>
-      </form>
-      <div class="buttons">
-        ${h ? `<button class="danger" id="unmark">${t("Unmark")}</button>` : ""}
-        <span class="flex"></span>
-        <button class="secondary" id="cancel">${t("Cancel")}</button>
-        <button class="primary" id="save-milestone">${t("Save")}</button>
-      </div>`);
-    dlg.querySelector("#save-milestone").onclick = async () => {
-      const f = dlg.querySelector("#form-milestone");
-      if (!f.date.value) { this._notice(t("Enter the date")); return; }
-      const note = f.note.value.trim();
-      await this._action(() => this._service("mark_milestone", { milestone_id: id, date: f.date.value, ...(note ? { note } : {}) }, true), t("Milestone installed!"));
-      close(); this._loadMilestones();
-    };
-    const d = dlg.querySelector("#unmark");
-    if (d) d.onclick = async () => {
-      await this._action(() => this._service("unmark_milestone", { milestone_id: id }, true), t("Milestone unmarked"));
-      close(); this._loadMilestones();
-    };
   }
 
   // ---------- Charts ----------
@@ -1630,28 +1568,6 @@ h2.sep { margin-top:18px; }
 .help { font-size:11px; color:var(--secondary-text-color); }
 #suggestion p { margin:0 0 8px; }
 .grid { stroke:var(--divider-color); stroke-width:1; }
-.hi-week { flex:1; text-align:center; display:flex; flex-direction:column; }
-.hi-p { margin:6px 0 0; font-size:14px; line-height:1.4; }
-.hi-area { margin:14px 0 4px; font-size:13px; font-weight:500; color:var(--secondary-text-color); }
-.hi-item { display:flex; gap:10px; width:100%; align-items:flex-start; text-align:left; background:none; border:0; border-top:1px solid var(--divider-color);
-  padding:9px 2px; color:var(--primary-text-color); font:inherit; font-size:14px; cursor:pointer; }
-.hi-box { flex:none; width:20px; height:20px; border:2px solid var(--secondary-text-color); border-radius:5px; box-sizing:border-box;
-  display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff; }
-.hi-item.made_at .hi-box { background:var(--primary-color); border-color:var(--primary-color); }
-.hi-text { display:flex; flex-direction:column; min-width:0; }
-.hi-list { margin:6px 0 0; padding-left:20px; font-size:14px; line-height:1.45; } .hi-list li { margin-bottom:4px; }
-.hi-pending { margin-top:12px; } .hi-pending summary { cursor:pointer; font-size:14px; color:var(--primary-color); }
-.hi-axis { position:relative; height:16px; margin-top:8px; font-size:11px; color:var(--secondary-text-color); }
-.hi-axis span { position:absolute; transform:translateX(-50%); } .hi-axis span:first-child { transform:none; } .hi-axis span:last-child { transform:translateX(-100%); }
-.hi-skill summary { list-style:none; cursor:pointer; padding:6px 0; color:var(--primary-text-color); } .hi-skill summary::-webkit-details-marker { display:none; }
-.hi-skill-t { display:flex; justify-content:space-between; gap:8px; font-size:14px; }
-.hi-hint { display:block; position:relative; height:12px; margin-top:4px; }
-.hi-band { position:absolute; top:3px; height:6px; border-radius:3px; background:var(--divider-color); }
-.hi-today { position:absolute; top:0; width:2px; height:12px; background:var(--primary-text-color); opacity:.55; }
-.hi-dot { position:absolute; top:1px; width:10px; height:10px; margin-left:-5px; border-radius:50%; background:var(--primary-color); border:1px solid var(--card-background-color); box-sizing:border-box; }
-.hi-legend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:8px; font-size:12px; color:var(--secondary-text-color); }
-.hi-legend span { display:inline-flex; align-items:center; gap:5px; }
-.hi-notice { margin:0 4px 10px; line-height:1.4; } .hi-notice a { color:var(--primary-color); }
 .axis { fill:var(--secondary-text-color); font-size:11px; }
 .value { fill:var(--primary-text-color); font-size:10px; }
 .goal { stroke:var(--error-color, #db4437); stroke-width:2; stroke-dasharray:6 4; }

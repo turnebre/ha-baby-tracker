@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from homeassistant.helpers import entity_registry as er
 
 from .const import (
     POOP_COLOR_DEFAULT, CONF_POOP_COLOR, CONF_POOP_CONSISTENCY, CONF_BIRTH_DATE, CONF_BABY_NAME,
-    CONF_SEX, CONF_UNIT, POOP_CONSISTENCY_DEFAULT, DOMAIN, PROJECT_NAME,
+    CONF_GROWTH_UNIT, CONF_SEX, CONF_UNIT, GROWTH_UNIT_DEFAULT, POOP_CONSISTENCY_DEFAULT, DOMAIN, PROJECT_NAME,
 )
 
 PANEL_URL = "baby-tracker"
@@ -47,6 +48,7 @@ def _config_baby(hass: HomeAssistant, entry: ConfigEntry) -> dict:
         "birth": d[CONF_BIRTH_DATE],
         "sex": d.get(CONF_SEX, "unspecified"),
         "unit": d.get(CONF_UNIT, "oz"),
+        "growth_unit": d.get(CONF_GROWTH_UNIT, GROWTH_UNIT_DEFAULT),
         "poop_color": d.get(CONF_POOP_COLOR, POOP_COLOR_DEFAULT),
         "poop_consistency": d.get(CONF_POOP_CONSISTENCY, POOP_CONSISTENCY_DEFAULT),
         "entities": {
@@ -59,6 +61,12 @@ def _config_baby(hass: HomeAssistant, entry: ConfigEntry) -> dict:
 async def async_update_panel(hass: HomeAssistant) -> None:
     """(Re)registers the panel with all loaded babies; removes it if none are left."""
     data = hass.data.setdefault(DOMAIN, {})
+    # Babies load and unload concurrently: two registrations of the same URL would make HA reject the second
+    async with data.setdefault("panel_lock", asyncio.Lock()):
+        await _update_panel(hass, data)
+
+
+async def _update_panel(hass: HomeAssistant, data: dict) -> None:
     babies: dict[str, ConfigEntry] = data.setdefault("babies", {})
     if PANEL_URL in hass.data.get(getattr(frontend, "DATA_PANELS", "frontend_panels"), {}):
         frontend.async_remove_panel(hass, PANEL_URL)

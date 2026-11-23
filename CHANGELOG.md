@@ -3,16 +3,19 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); semantic versioning (MAJOR.MINOR.PATCH).
 While the version is 0.x, minor versions may contain breaking changes.
 
-## [2.1.0]
-### Changed
-- The pediatrician's plan is now a **daily goal (oz/day)** plus the daytime interval, instead of a goal per feeding. The old
-  `number.*_goal_per_feeding` entity is removed; **re-enter your daily goal** after updating (default 24 oz).
-- New **bedtime / wake-up** settings (`time.*_night_start`, `time.*_night_end`, default 9:00 PM–6:00 AM). No feedings are
-  expected overnight: "Expected by now" stays flat until wake-up and reaches the goal at bedtime, the list of upcoming feedings stops
-  at bedtime (with a top-up at bedtime when it is at least half an interval away), "Next feeding" (and so the reminder) moves to
-  wake-up, and per-feeding amounts are the remaining goal divided by the daytime feedings left. Set both times equal to disable.
-- Growth metrics are entered and shown in pounds and inches (panel, `log_measurement` fields `weight_lb`/`height_in`/`head_in`,
-  `list_measurements` output, weight/length sensors). The database still stores kg/cm, so existing data is unaffected.
+## [Unreleased]
+### Added
+- **Growth units** option (imperial lb/in or metric kg/cm) when adding a baby, in **Configure**, and in the panel's **Settings** tab
+  (new `baby_tracker.set_growth_unit` action). It controls the Growth tab, the Today summary and the weight/length sensors.
+  Defaults to imperial, so existing babies are unchanged; stored data is not affected.
+- `log_measurement` also accepts `weight_kg`, `height_cm` and `head_cm` (use either set per measurement), and `list_measurements`
+  returns both the metric and imperial fields.
+- The weight and length sensors now report kg/cm natively and are shown in the baby's growth unit through the entity registry.
+  A unit you picked yourself in the sensor's settings (other than lb/kg and in/cm) is left alone. The sensors also expose the
+  exact `weight_kg` / `height_cm` as attributes.
+- The `measurement` event now carries both the lb/in and kg/cm fields.
+- New `baby_tracker_growth_unit_changed` event (`baby`, `growth_unit`), fired when the growth unit is changed from the panel or
+  the `set_growth_unit` action; open panels use it to stay in sync.
 
 ## [2.0.0] - English-only fork
 ### Changed
@@ -23,10 +26,19 @@ While the version is 0.x, minor versions may contain breaking changes.
 - Database file `bebe.db` → `baby_tracker.db` (additional babies: `baby_tracker_<id>.db`).
 - Blueprints live in `blueprints/automation/baby_tracker/` and are English only; notification action ids are `BABY_*`.
 - Milestone catalog (`www/milestones.json`) is English only and uses English ids.
+- The pediatrician's plan is now a **daily goal (oz/day)** plus the daytime interval, instead of a goal per feeding. The old
+  `number.*_goal_per_feeding` entity is removed; **re-enter your daily goal** after updating (default 24 oz).
+- New **bedtime / wake-up** settings (`time.*_night_start`, `time.*_night_end`, default 9:00 PM–6:00 AM). No feedings are
+  expected overnight: "Expected by now" stays flat until wake-up and reaches the goal at bedtime, the list of upcoming feedings stops
+  at bedtime (with a top-up at bedtime when it is at least half an interval away), "Next feeding" (and so the reminder) moves to
+  wake-up, and per-feeding amounts are the remaining goal divided by the daytime feedings left. Set both times equal to disable.
+- Growth metrics are entered and shown in pounds and inches (panel, `log_measurement` fields `weight_lb`/`height_in`/`head_in`,
+  `list_measurements` output, weight/length sensors). The database still stores kg/cm, so existing data is unaffected.
 ### Added
 - "Import data from a previous install" option when adding a baby: copies a legacy `bebe*.db` into the new English schema
   (the original file is never modified).
 ### Removed
+- The **Milestones** tab in the panel. The `mark_milestone`, `unmark_milestone` and `list_milestones` actions and the stored data are unchanged.
 - Upgrade code for databases older than the Spanish schema v6 (use the importer instead).
 
 ## [1.2.0] - 2026-11-02

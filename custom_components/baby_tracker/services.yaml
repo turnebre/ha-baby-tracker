@@ -165,13 +165,22 @@ log_measurement:
         datetime:
     weight_lb:
       selector:
-        number: {min: 1, max: 66, step: 0.01, unit_of_measurement: lb, mode: box}
+        number: {min: 0.99, max: 66.14, step: 0.01, unit_of_measurement: lb, mode: box}
+    weight_kg:
+      selector:
+        number: {min: 0.45, max: 30, step: 0.01, unit_of_measurement: kg, mode: box}
     height_in:
       selector:
         number: {min: 8, max: 51, step: 0.1, unit_of_measurement: in, mode: box}
+    height_cm:
+      selector:
+        number: {min: 20.3, max: 129.5, step: 0.1, unit_of_measurement: cm, mode: box}
     head_in:
       selector:
         number: {min: 8, max: 24, step: 0.1, unit_of_measurement: in, mode: box}
+    head_cm:
+      selector:
+        number: {min: 20.3, max: 61.0, step: 0.1, unit_of_measurement: cm, mode: box}
     note:
       selector:
         text:
@@ -186,6 +195,19 @@ delete_measurement:
       required: true
       selector:
         number: {min: 1, max: 1000000, mode: box}
+
+set_growth_unit:
+  fields:
+    baby:
+      selector:
+        config_entry:
+          integration: baby_tracker
+    growth_unit:
+      required: true
+      selector:
+        select:
+          options: [imperial, metric]
+          translation_key: growth_unit
 
 list_feedings:
   fields:

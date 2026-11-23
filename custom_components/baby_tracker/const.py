@@ -22,12 +22,16 @@ PROJECT_NAME = "Baby Tracker"
 # Unit used to display and enter amounts (everything is stored in oz internally)
 CONF_UNIT = "unit"
 UNITS = ["oz", "ml"]
+# Unit system used to enter and display growth measurements (the database always stores kg/cm)
+CONF_GROWTH_UNIT = "growth_unit"
+GROWTH_UNITS = ["imperial", "metric"]
+GROWTH_UNIT_DEFAULT = "imperial"
 
 TYPES = ["formula", "breast_milk", "mixed"]
 CONFIDENCES = ["exact", "estimated", "inferred"]
 
 ML_PER_OZ = 29.5735
-# Growth measurements are stored in kg/cm in the database and shown/entered in lb/in.
+# Growth measurements are stored in kg/cm in the database and shown/entered in lb/in or kg/cm (CONF_GROWTH_UNIT).
 LB_PER_KG = 2.20462262
 CM_PER_IN = 2.54
 # General weight-based reference (informational only): ~150 ml/kg/day, capped at ~32 oz/day.
@@ -58,3 +62,4 @@ POOP_CONSISTENCIES = ["watery", "seedy", "pasty", "hard", "not_sure"]
 
 EVENT_FEEDING = "baby_tracker_feeding_logged"
 EVENT_MEASUREMENT = "baby_tracker_measurement_logged"
+EVENT_GROWTH_UNIT = "baby_tracker_growth_unit_changed"
