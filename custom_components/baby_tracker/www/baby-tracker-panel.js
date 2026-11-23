@@ -247,7 +247,13 @@ class BabyPanel extends HTMLElement {
     f[g.wKey].value = d.w; f[g.lKey].value = d.l; f[g.hKey].value = d.h;
   }
 
-  connectedCallback() { this._timer = setInterval(() => this._tab === "today" && this._paintSummary(), 30000); }
+  connectedCallback() {
+    this._timer = setInterval(() => {
+      if (this._tab === "today") this._paintSummary();
+      // Without the unit-change event (Home Assistant only lets admins subscribe to custom events) ask the backend
+      if (this._ready && !this._unsubUnit) this._syncGrowthUnit();
+    }, 30000);
+  }
   disconnectedCallback() {
     clearInterval(this._timer);
     if (this._unsub) { this._unsub(); this._unsub = null; }
@@ -313,6 +319,7 @@ class BabyPanel extends HTMLElement {
       this._tab = b.dataset.tab;
       this.shadowRoot.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
       this._paint();
+      if (!this._unsubUnit) this._syncGrowthUnit();
     });
     try {
       this._unsub = await this._hass.connection.subscribeEvents(() => {
@@ -326,7 +333,7 @@ class BabyPanel extends HTMLElement {
         const cfg = this._babies.find((b) => b.entry_id === ev.data.baby);
         if (cfg) this._applyGrowthUnit(ev.data.growth_unit, cfg);
       }, "baby_tracker_growth_unit_changed");
-    } catch (e) { /* the age sensor and the lookup on mount still keep the unit in sync */ }
+    } catch (e) { this._unsubUnit = null; /* not allowed for this user: the panel asks the backend periodically and on tab changes */ }
     this._paint();
     this._syncGrowthUnit();
   }
