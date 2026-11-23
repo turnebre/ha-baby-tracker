@@ -62,3 +62,4 @@ POOP_CONSISTENCIES = ["watery", "seedy", "pasty", "hard", "not_sure"]
 
 EVENT_FEEDING = "baby_tracker_feeding_logged"
 EVENT_MEASUREMENT = "baby_tracker_measurement_logged"
+EVENT_GROWTH_UNIT = "baby_tracker_growth_unit_changed"

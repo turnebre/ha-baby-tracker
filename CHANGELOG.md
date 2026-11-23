@@ -14,6 +14,8 @@ While the version is 0.x, minor versions may contain breaking changes.
   A unit you picked yourself in the sensor's settings (other than lb/kg and in/cm) is left alone. The sensors also expose the
   exact `weight_kg` / `height_cm` as attributes.
 - The `measurement` event now carries both the lb/in and kg/cm fields.
+- New `baby_tracker_growth_unit_changed` event (`baby`, `growth_unit`), fired when the growth unit is changed from the panel or
+  the `set_growth_unit` action; open panels use it to stay in sync.
 
 ## [2.0.0] - English-only fork
 ### Changed

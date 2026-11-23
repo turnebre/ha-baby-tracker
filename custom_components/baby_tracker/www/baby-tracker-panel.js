@@ -20,8 +20,8 @@ const toOz = (v) => (isMl() ? v / ML_PER_OZ : v);
 // Growth unit system (Configure or Settings): the database always stores kg/cm
 let GROWTH = "imperial";
 const G = () => (GROWTH === "metric"
-  ? { w: "kg", l: "cm", wKey: "weight_kg", lKey: "height_cm", hKey: "head_cm", wMin: 0.5, wMax: 30, lMin: 20, lMax: 130, hMin: 20, hMax: 60, wStep: 0.01 }
-  : { w: "lb", l: "in", wKey: "weight_lb", lKey: "height_in", hKey: "head_in", wMin: 1, wMax: 66, lMin: 8, lMax: 51, hMin: 8, hMax: 24, wStep: 0.01 });
+  ? { w: "kg", l: "cm", wKey: "weight_kg", lKey: "height_cm", hKey: "head_cm", wMin: 0.45, wMax: 30, lMin: 20.3, lMax: 129.5, hMin: 20.3, hMax: 61, wStep: 0.01 }
+  : { w: "lb", l: "in", wKey: "weight_lb", lKey: "height_in", hKey: "head_in", wMin: 0.99, wMax: 66.14, lMin: 8, lMax: 51, hMin: 8, hMax: 24, wStep: 0.01 });
 // Number in the unit (no suffix) and amount with suffix
 const amountN = (oz, d = 2) => (oz === null || oz === undefined || oz === "" || isNaN(oz)) ? "—"
   : isMl() ? String(Math.round(oz * ML_PER_OZ)) : num(oz, d);
@@ -251,6 +251,7 @@ class BabyPanel extends HTMLElement {
   disconnectedCallback() {
     clearInterval(this._timer);
     if (this._unsub) { this._unsub(); this._unsub = null; }
+    if (this._unsubUnit) { this._unsubUnit(); this._unsubUnit = null; }
   }
 
   // ---------- utilities ----------
@@ -320,6 +321,12 @@ class BabyPanel extends HTMLElement {
         if (this._tab === "charts") this._paintCharts();
       }, "baby_tracker_feeding_logged");
     } catch (e) { /* no subscription: refreshed when switching tabs */ }
+    try {
+      this._unsubUnit = await this._hass.connection.subscribeEvents((ev) => {
+        const cfg = this._babies.find((b) => b.entry_id === ev.data.baby);
+        if (cfg) this._applyGrowthUnit(ev.data.growth_unit, cfg);
+      }, "baby_tracker_growth_unit_changed");
+    } catch (e) { /* the age sensor and the lookup on mount still keep the unit in sync */ }
     this._paint();
     this._syncGrowthUnit();
   }

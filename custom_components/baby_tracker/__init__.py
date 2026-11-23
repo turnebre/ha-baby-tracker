@@ -40,6 +40,7 @@ from .const import (
     POOP_CONSISTENCIES,
     DB_FILENAME,
     DOMAIN,
+    EVENT_GROWTH_UNIT,
     EVENT_MEASUREMENT,
     EVENT_FEEDING,
     PRESCRIBED_INTERVAL_DEFAULT_H,
@@ -179,15 +180,17 @@ MILESTONE_SCHEMA = vol.Schema({
 
 MILESTONE_ID_SCHEMA = vol.Schema({vol.Required("milestone_id"): cv.string})
 
-# Each measurement can be given in imperial (lb/in) or metric (kg/cm), whatever the baby's growth unit is
+# Each measurement can be given in imperial (lb/in) or metric (kg/cm), whatever the baby's growth unit is.
+# The two ranges are the same physical range, widened/narrowed so that a value converted from one unit system to the
+# other (as the panel does with an unsaved draft) still falls inside the other range after rounding.
 MEASUREMENT_SCHEMA = vol.Schema({
     vol.Optional("date"): cv.datetime,
-    vol.Exclusive("weight_lb", "weight"): vol.All(vol.Coerce(float), vol.Range(min=1, max=66)),
-    vol.Exclusive("weight_kg", "weight"): vol.All(vol.Coerce(float), vol.Range(min=0.5, max=30)),
+    vol.Exclusive("weight_lb", "weight"): vol.All(vol.Coerce(float), vol.Range(min=0.99, max=66.14)),
+    vol.Exclusive("weight_kg", "weight"): vol.All(vol.Coerce(float), vol.Range(min=0.45, max=30)),
     vol.Exclusive("height_in", "height"): vol.All(vol.Coerce(float), vol.Range(min=8, max=51)),
-    vol.Exclusive("height_cm", "height"): vol.All(vol.Coerce(float), vol.Range(min=20, max=130)),
+    vol.Exclusive("height_cm", "height"): vol.All(vol.Coerce(float), vol.Range(min=20.3, max=129.5)),
     vol.Exclusive("head_in", "head"): vol.All(vol.Coerce(float), vol.Range(min=8, max=24)),
-    vol.Exclusive("head_cm", "head"): vol.All(vol.Coerce(float), vol.Range(min=20, max=60)),
+    vol.Exclusive("head_cm", "head"): vol.All(vol.Coerce(float), vol.Range(min=20.3, max=61.0)),
     vol.Optional("note"): cv.string,
 })
 
@@ -580,6 +583,8 @@ async def _set_growth_unit(hass: HomeAssistant, call: ServiceCall) -> ServiceRes
         # unit and the coordinator data change in place, and open panels follow the growth unit from the age sensor
         async_apply_growth_unit(hass, entry, unit)
         await entry.runtime_data.coordinator.async_refresh()
+        # Open panels follow this event (it does not depend on any optional entity being enabled)
+        hass.bus.async_fire(EVENT_GROWTH_UNIT, {"baby": entry.entry_id, "growth_unit": unit})
     return {"growth_unit": unit}
 
 
