@@ -199,10 +199,13 @@ class BabyPanel extends HTMLElement {
   // ---------- utilities ----------
   _st(key) { const id = this._cfg.entities[key]; return id ? this._hass.states[id] : undefined; }
   _val(key) { const s = this._st(key); return s && !["unknown", "unavailable"].includes(s.state) ? s.state : null; }
-  // Unit the weight/height sensor reports in; it can lag behind a just-changed setting until the integration reloads
-  _growthUnit(key, fallback) {
-    const s = this._st(key);
-    return (s && s.attributes && s.attributes.unit_of_measurement) || fallback;
+  // Latest weight/length from its sensor, converted to the baby's growth unit whatever unit the sensor reports in
+  _growth(key) {
+    const v = this._num(key); if (v === null) return null;
+    const from = (this._st(key).attributes || {}).unit_of_measurement;
+    const to = key === "weight" ? G().w : G().l;
+    const F = { "lb>kg": 1 / 2.20462262, "kg>lb": 2.20462262, "in>cm": 2.54, "cm>in": 1 / 2.54 };
+    return from && from !== to ? v * (F[`${from}>${to}`] ?? 1) : v;
   }
 
   _num(key) { const v = this._val(key); return v === null ? null : Number(v); }
@@ -412,7 +415,7 @@ class BabyPanel extends HTMLElement {
       <div class="kpi"><div class="label">${t("Bottles finished (7 d)")}</div><div class="num">${pct === null ? "—" : `${pct}<small>%</small>`}</div>
         <div class="sub">${t("wasted")} ${amount(this._num("wasted_7d"), 1)}</div></div>
       <div class="kpi"><div class="label">${t("Age")}</div><div class="num sm">${ageText(this._val("age"))}</div></div>
-      <div class="kpi"><div class="label">${t("Weight · Length")}</div><div class="num sm">${num(this._num("weight"), 2)} ${this._growthUnit("weight", G().w)} · ${num(this._num("height"), 1)} ${this._growthUnit("height", G().l)}</div></div>`;
+      <div class="kpi"><div class="label">${t("Weight · Length")}</div><div class="num sm">${num(this._growth("weight"), 2)} ${G().w} · ${num(this._growth("height"), 1)} ${G().l}</div></div>`;
   }
 
   // Progress of the day against two goals: minimum and ideal (the smaller and larger of the pediatrician's and the weight-based one)
@@ -908,12 +911,13 @@ class BabyPanel extends HTMLElement {
     };
     this.shadowRoot.getElementById("save-units").onclick = async () => {
       const unit = this.shadowRoot.getElementById("form-units").growth_unit.value;
-      if (unit === GROWTH) { this._notice(t("No changes")); return; }
+      // The baby the save belongs to: the user may switch babies while the request is running
+      const cfg = this._cfg;
+      if (unit === (cfg.growth_unit || "imperial")) { this._notice(t("No changes")); return; }
       await this._action(() => this._service("set_growth_unit", { growth_unit: unit }), t("Units saved"));
-      // The integration reloads in the background; update the panel now instead of waiting for it
-      this._cfg.growth_unit = unit;
-      GROWTH = unit;
-      this._paint();
+      cfg.growth_unit = unit;
+      if (this._cfg === cfg) GROWTH = unit;
+      // No repaint: the other tabs repaint when opened, and this one may hold unsaved feeding settings
     };
     this._paintSuggestion();
   }

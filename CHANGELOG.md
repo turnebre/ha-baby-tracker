@@ -10,8 +10,9 @@ While the version is 0.x, minor versions may contain breaking changes.
   Defaults to imperial, so existing babies are unchanged; stored data is not affected.
 - `log_measurement` also accepts `weight_kg`, `height_cm` and `head_cm` (use either set per measurement), and `list_measurements`
   returns both the metric and imperial fields.
-- Note: switching a baby to metric changes the unit of its weight and length sensors, so Home Assistant may offer a one-time
-  statistics fix in **Developer tools → Statistics**.
+- The weight and length sensors now report kg/cm natively and are shown in the baby's growth unit through the entity registry.
+  A unit you picked yourself in the sensor's settings (other than lb/kg and in/cm) is left alone.
+- The `measurement` event now carries both the lb/in and kg/cm fields.
 
 ## [2.0.0] - English-only fork
 ### Changed

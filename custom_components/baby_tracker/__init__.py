@@ -62,6 +62,7 @@ from .const import (
 from .coordinator import BabyCoordinator, BabyRuntime
 from .db import BabyDB, BabyError
 from .panel import async_update_panel
+from .sensor import async_apply_growth_unit
 
 PLATFORMS = [Platform.NUMBER, Platform.SENSOR, Platform.TIME]
 
@@ -554,7 +555,9 @@ async def _log_measurement(hass: HomeAssistant, call: ServiceCall) -> ServiceRes
         stored["head_cm"] = round(d["head_in"] * CM_PER_IN, 3)
     measurement_id = await _db(hass, rt.db.add_measurement, stored)
     await rt.coordinator.async_refresh()
-    hass.bus.async_fire(EVENT_MEASUREMENT, {"id": measurement_id, "baby": rt.coordinator.entry.entry_id, **d})
+    # The event carries both unit systems; the keys the caller sent are kept exactly as given
+    both = {k: v for k, v in _with_units(stored).items() if k in MEASUREMENT_FIELDS and v is not None}
+    hass.bus.async_fire(EVENT_MEASUREMENT, {"id": measurement_id, "baby": rt.coordinator.entry.entry_id, **both, **d})
     return {"id": measurement_id}
 
 
@@ -573,8 +576,10 @@ async def _set_growth_unit(hass: HomeAssistant, call: ServiceCall) -> ServiceRes
     unit = call.data[CONF_GROWTH_UNIT]
     if entry.data.get(CONF_GROWTH_UNIT, GROWTH_UNIT_DEFAULT) != unit:
         hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_GROWTH_UNIT: unit})
-        # Reload so the sensors and the panel pick up the new unit
-        hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+        # No reload: the services stay available. Update the sensors' unit, the data and the panel in place
+        async_apply_growth_unit(hass, entry, unit)
+        await entry.runtime_data.coordinator.async_refresh()
+        await async_update_panel(hass)
     return {"growth_unit": unit}
 
 

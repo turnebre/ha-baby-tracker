@@ -14,12 +14,13 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfMass, UnitOfTime
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import CM_PER_IN, LB_PER_KG, ML_PER_OZ
+from .const import DOMAIN, ML_PER_OZ
 from .coordinator import BabyCoordinator
 from .entity import device_info
 
@@ -117,14 +118,14 @@ SENSORS: tuple[BabySensorDescription, ...] = (
     ),
     BabySensorDescription(
         key="weight", translation_key="weight", device_class=SensorDeviceClass.WEIGHT,
-        native_unit_of_measurement=UnitOfMass.POUNDS, suggested_display_precision=2,
-        value=lambda d: round(d["weight"]["weight_kg"] * LB_PER_KG, 3) if d["weight"] else None,
+        native_unit_of_measurement=UnitOfMass.KILOGRAMS, suggested_display_precision=2,
+        value=lambda d: round(d["weight"]["weight_kg"], 4) if d["weight"] else None,
         attributes=lambda d: {"date": d["weight"]["date"]} if d["weight"] else {},
     ),
     BabySensorDescription(
         key="height", translation_key="height", device_class=SensorDeviceClass.DISTANCE,
-        native_unit_of_measurement=UnitOfLength.INCHES, suggested_display_precision=1,
-        value=lambda d: round(d["height"]["height_cm"] / CM_PER_IN, 2) if d["height"] else None,
+        native_unit_of_measurement=UnitOfLength.CENTIMETERS, suggested_display_precision=1,
+        value=lambda d: round(d["height"]["height_cm"], 2) if d["height"] else None,
         attributes=lambda d: {"date": d["height"]["date"]} if d["height"] else {},
     ),
     BabySensorDescription(
@@ -258,30 +259,43 @@ SENSORS: tuple[BabySensorDescription, ...] = (
 )
 
 
-# Growth sensors in kg/cm for babies whose growth unit is metric (the database already stores kg/cm)
-METRIC_GROWTH: dict[str, dict[str, Any]] = {
-    "weight": {
-        "native_unit_of_measurement": UnitOfMass.KILOGRAMS, "suggested_display_precision": 2,
-        "value": lambda d: round(d["weight"]["weight_kg"], 3) if d["weight"] else None,
-    },
-    "height": {
-        "native_unit_of_measurement": UnitOfLength.CENTIMETERS, "suggested_display_precision": 1,
-        "value": lambda d: round(d["height"]["height_cm"], 1) if d["height"] else None,
-    },
+# Growth sensors always report kg/cm natively (what the database stores). The unit people see is the entity
+# registry's unit for the sensor, which follows the baby's growth unit setting.
+GROWTH_DISPLAY_UNITS = {
+    "imperial": {"weight": UnitOfMass.POUNDS, "height": UnitOfLength.INCHES},
+    "metric": {"weight": UnitOfMass.KILOGRAMS, "height": UnitOfLength.CENTIMETERS},
 }
+_MANAGED_UNITS = {u for units in GROWTH_DISPLAY_UNITS.values() for u in units.values()}
 
 
-def _metric(desc: BabySensorDescription) -> BabySensorDescription:
-    return replace(desc, **METRIC_GROWTH[desc.key]) if desc.key in METRIC_GROWTH else desc
+@callback
+def async_apply_growth_unit(hass: HomeAssistant, entry: ConfigEntry, growth_unit: str) -> None:
+    """Point the weight and length sensors of this baby at the growth unit's display units.
+
+    HA keeps the unit a sensor is shown in in the entity registry, so changing the description is not enough for
+    sensors that already exist. A unit the user picked themselves in the entity settings (anything other than
+    lb/kg and in/cm) is left alone.
+    """
+    registry = er.async_get(hass)
+    for key, unit in GROWTH_DISPLAY_UNITS[growth_unit].items():
+        if not (entity_id := registry.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_{key}")):
+            continue
+        options = dict(registry.async_get(entity_id).options.get("sensor", {}))
+        if options.get("unit_of_measurement", unit) in _MANAGED_UNITS and options.get("unit_of_measurement") != unit:
+            registry.async_update_entity_options(entity_id, "sensor", {**options, "unit_of_measurement": unit})
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     coordinator = entry.runtime_data.coordinator
-    metric = coordinator.data["growth_unit"] == "metric"
+    growth_unit = coordinator.data["growth_unit"]
+    async_apply_growth_unit(hass, entry, growth_unit)
+    # New sensors start in the baby's unit; existing ones were just reconciled above
     async_add_entities(
-        BabySensor(coordinator, entry, _metric(desc) if metric else desc) for desc in SENSORS
+        BabySensor(coordinator, entry, replace(desc, suggested_unit_of_measurement=GROWTH_DISPLAY_UNITS[growth_unit][desc.key]))
+        if desc.key in GROWTH_DISPLAY_UNITS["imperial"] else BabySensor(coordinator, entry, desc)
+        for desc in SENSORS
     )
 
 
