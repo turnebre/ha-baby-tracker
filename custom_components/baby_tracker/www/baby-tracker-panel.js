@@ -258,6 +258,7 @@ class BabyPanel extends HTMLElement {
     clearInterval(this._timer);
     if (this._unsub) { this._unsub(); this._unsub = null; }
     if (this._unsubUnit) { this._unsubUnit(); this._unsubUnit = null; }
+    if (this._conn && this._onReady) { this._conn.removeEventListener("ready", this._onReady); this._conn = null; }
   }
 
   // ---------- utilities ----------
@@ -334,6 +335,12 @@ class BabyPanel extends HTMLElement {
         if (cfg) this._applyGrowthUnit(ev.data.growth_unit, cfg);
       }, "baby_tracker_growth_unit_changed");
     } catch (e) { this._unsubUnit = null; /* not allowed for this user: the panel asks the backend periodically and on tab changes */ }
+    // Events missed while the connection was down are not replayed: ask the backend again whenever it reconnects
+    try {
+      this._conn = this._hass.connection;
+      this._onReady = () => this._syncGrowthUnit();
+      this._conn.addEventListener("ready", this._onReady);
+    } catch (e) { this._conn = null; /* the periodic lookup and the age sensor still cover it */ }
     this._paint();
     this._syncGrowthUnit();
   }
