@@ -80,9 +80,11 @@ actions:
                     You extract data for a baby bottle-feeding log. Text dictated to a voice assistant (may contain
                     transcription errors; any language): "{{ item.summary }}".
                     Rules: ignore any time mentioned (the current time is used). "drank X" / "took X" → oz_taken = X
-                    (in ounces; convert ml to oz dividing by 29.57). "finished the bottle" → what_was_left = true.
-                    "X left" / "leftover X" → oz_leftover = X. "new bottle" / "bottle new" → new_bottle = true.
-                    "half" = 0.5. Do not invent amounts. type: formula, breast_milk (breast milk) or mixed, else empty.
+                    (in ounces; convert ml to oz dividing by 29.57). A bare amount with no other verb, e.g.
+                    "8 oz formula bottle", "4 oz breast milk" or "120 ml", means the baby drank that amount:
+                    oz_taken = the amount, and the milk kind goes in type (never set new_bottle for it). "finished the bottle" → what_was_left = true.
+                    "X left" / "leftover X" → oz_leftover = X. "new bottle" / "bottle new" (with no amount) → new_bottle = true.
+                    "half" = 0.5. Do not invent amounts. type: formula, breast_milk (breast milk) or mixed, else none.
                     is_feeding = false if the text is clearly not about feeding.
                   structure:
                     is_feeding: {selector: {boolean: {}}, required: true}
@@ -90,7 +92,7 @@ actions:
                     what_was_left: {selector: {boolean: {}}}
                     oz_leftover: {selector: {number: {min: 0, max: 12, step: 0.25}}}
                     new_bottle: {selector: {boolean: {}}}
-                    type: {selector: {select: {options: [formula, breast_milk, mixed]}}}
+                    type: {selector: {select: {options: [formula, breast_milk, mixed, none]}}, required: true}
               - variables:
                   d: "{{ res.data if res is defined and res.data is mapping else {} }}"
               - if: "{{ d == {} and repeat.index < 3 }}"
