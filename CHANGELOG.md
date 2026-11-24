@@ -3,7 +3,7 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); semantic versioning (MAJOR.MINOR.PATCH).
 While the version is 0.x, minor versions may contain breaking changes.
 
-## [Unreleased]
+## [2.1.0] - 2026-11-23
 ### Added
 - **Growth units** option (imperial lb/in or metric kg/cm) when adding a baby, in **Configure**, and in the panel's **Settings** tab
   (new `baby_tracker.set_growth_unit` action). It controls the Growth tab, the Today summary and the weight/length sensors.
@@ -16,6 +16,11 @@ While the version is 0.x, minor versions may contain breaking changes.
 - The `measurement` event now carries both the lb/in and kg/cm fields.
 - New `baby_tracker_growth_unit_changed` event (`baby`, `growth_unit`), fired when the growth unit is changed from the panel or
   the `set_growth_unit` action; open panels use it to stay in sync.
+### Removed
+- The **Milestones** tab in the panel. The `mark_milestone`, `unmark_milestone` and `list_milestones` actions and the stored data are unchanged.
+### Fixed
+- The `voice_list` blueprint's AI schema is now valid for strict providers (the optional `type` field is required with a `none`
+  option), and a bare amount like "8 oz formula bottle" is logged as a feeding.
 
 ## [2.0.0] - English-only fork
 ### Changed
@@ -38,7 +43,6 @@ While the version is 0.x, minor versions may contain breaking changes.
 - "Import data from a previous install" option when adding a baby: copies a legacy `bebe*.db` into the new English schema
   (the original file is never modified).
 ### Removed
-- The **Milestones** tab in the panel. The `mark_milestone`, `unmark_milestone` and `list_milestones` actions and the stored data are unchanged.
 - Upgrade code for databases older than the Spanish schema v6 (use the importer instead).
 
 ## [1.2.0] - 2026-11-02
